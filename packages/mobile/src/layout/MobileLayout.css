@@ -1,0 +1,199 @@
+.mobile-stage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(circle at top, rgba(22, 119, 255, 0.14), transparent 38%),
+    linear-gradient(180deg, #e8eef8 0%, #dfe7f2 100%);
+}
+
+.mobile-device {
+  width: min(100%, 390px);
+  height: min(844px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
+  overflow: hidden;
+  position: relative;
+  background: #f5f6f8;
+  box-shadow:
+    0 30px 80px rgba(15, 23, 42, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.mobile-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2329;
+  background: #fff;
+  position: relative;
+}
+
+.role-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  background: #fff;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.role-brand {
+  border: 0;
+  background: transparent;
+  color: #1f2329;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+}
+
+.role-switcher {
+  position: relative;
+  z-index: 30;
+}
+
+.role-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #bedaff;
+  background: #e8f3ff;
+  color: #1677ff;
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.role-switcher-btn i {
+  font-style: normal;
+  font-size: 10px;
+}
+
+.role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1677ff;
+}
+
+.role-dot[data-role='merchant'] {
+  background: #ff7d00;
+}
+
+.role-dot[data-role='rider'] {
+  background: #00b42a;
+}
+
+.role-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 200px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  padding: 8px;
+  border: 1px solid #eef0f3;
+}
+
+.role-menu-title {
+  margin: 4px 8px 8px;
+  font-size: 11px;
+  color: #86909c;
+}
+
+.role-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 10px 8px;
+  border-radius: 8px;
+  color: #1f2329;
+}
+
+.role-menu button.on,
+.role-menu button:hover {
+  background: #f2f3f5;
+}
+
+.role-menu b {
+  display: block;
+  font-size: 13px;
+}
+
+.role-menu em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: #86909c;
+  margin-top: 2px;
+}
+
+.role-menu i {
+  color: #1677ff;
+  font-style: normal;
+}
+
+.mobile-notch {
+  width: 96px;
+  height: 22px;
+  border-radius: 14px;
+  background: #111;
+}
+
+.mobile-body {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #f5f6f8;
+}
+
+.mobile-tabbar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 6px 4px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid #eef0f3;
+}
+
+.mobile-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-decoration: none;
+  padding: 6px 0;
+  color: #8c8c8c;
+  font-size: 11px;
+}
+
+.mobile-tab.active {
+  color: #1677ff;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .mobile-stage {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .mobile-device {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

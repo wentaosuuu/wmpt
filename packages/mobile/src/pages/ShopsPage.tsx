@@ -1,0 +1,127 @@
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Tag } from '../components/ui'
+import { categoryChips, distances, sortOptions, stores, type StoreSortKey } from '../mock'
+import { sortStores } from '../lib/storeFilter'
+import { money } from '../lib/utils'
+import { useApp } from '../store/AppStore'
+
+export function ShopsPage() {
+  const { addresses } = useApp()
+  const [keyword, setKeyword] = useState('')
+  const [cuisine, setCuisine] = useState('全部')
+  const [distance, setDistance] = useState(99)
+  const [sort, setSort] = useState<StoreSortKey>('distance')
+  const addr = addresses.find((a) => a.isDefault) ?? addresses[0]
+
+  const list = useMemo(() => {
+    const filtered = stores.filter((s) => {
+      if (!s.takeoutEnabled) return false
+      if (cuisine !== '全部' && s.cuisine !== cuisine) return false
+      if (s.distanceKm > distance) return false
+      if (keyword && !s.name.includes(keyword) && !s.cuisine.includes(keyword)) return false
+      return true
+    })
+    return sortStores(filtered, sort)
+  }, [keyword, cuisine, distance, sort])
+
+  return (
+    <section className="page shops-page">
+      <header className="page-title-bar">
+        <h1>店铺</h1>
+      </header>
+      <div className="shops-search-row">
+        <div className="shops-search">
+          <span>⌕</span>
+          <input
+            placeholder="请输入店铺 / 品类"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+        </div>
+        <div className="shops-loc">
+          <span>📍</span>
+          <em>{addr?.street ?? '选择地址'}</em>
+        </div>
+      </div>
+
+      <div className="cat-quick compact">
+        {categoryChips.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={`cat-quick-item ${cuisine === c.id ? 'on' : ''}`}
+            onClick={() => setCuisine(c.id)}
+          >
+            <span className="cat-quick-icon">{c.icon}</span>
+            <em>{c.label}</em>
+          </button>
+        ))}
+      </div>
+
+      <div className="shops-filters">
+        <label>
+          <select value={distance} onChange={(e) => setDistance(Number(e.target.value))}>
+            {distances.map((d) => (
+              <option key={d.label} value={d.value}>
+                {d.label === '不限' ? '距离不限' : d.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="shops-filter-hint">共 {list.length} 家</span>
+      </div>
+
+      <div className="sort-bar shops-sort">
+        {sortOptions.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={sort === s.id ? 'on' : ''}
+            onClick={() => setSort(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="shop-list">
+        {list.map((s) => (
+          <Link key={s.id} to={`/store/${s.id}`} className="shop-card">
+            <div className="shop-logo">{s.cover}</div>
+            <div className="shop-info">
+              <div className="shop-top">
+                <div>
+                  <h3>{s.name}</h3>
+                  <p className="shop-branch">
+                    {s.cuisine} · {s.hours}
+                  </p>
+                </div>
+                <span className="shop-dist">{Math.round(s.distanceKm * 1000)}m</span>
+              </div>
+              <div className="shop-meta">
+                <Tag tone={s.status === 'open' ? 'green' : 'gray'}>
+                  {s.status === 'open' ? '营业中' : '歇业中'}
+                </Tag>
+                <span>★ {s.rating}</span>
+                <span>月售 {s.monthlySales}</span>
+                <span>约 {s.etaMin} 分钟</span>
+              </div>
+              <div className="shop-fees">
+                <span>起送 {money(s.minOrder)}</span>
+                <span>配送 {money(s.deliveryFee)}</span>
+                {s.tags.map((t) => (
+                  <span key={t} className="promo">
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <p className="shop-addr">{s.address}</p>
+            </div>
+          </Link>
+        ))}
+        {!list.length ? <div className="empty">暂无符合条件的店铺</div> : null}
+      </div>
+    </section>
+  )
+}

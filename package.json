@@ -1,0 +1,21 @@
+{
+  "name": "wmpt",
+  "private": true,
+  "version": "0.0.0",
+  "description": "wmpt 高保真原型（后台管理端 + 移动端 H5）",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:admin": "npm -w admin run dev",
+    "dev:mobile": "npm -w mobile run dev",
+    "build": "npm -w mobile run build && npm -w admin run build",
+    "build:mobile": "npm -w mobile run build",
+    "build:admin": "npm -w admin run build",
+    "lint": "npm -w mobile run lint && npm -w admin run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
+}
