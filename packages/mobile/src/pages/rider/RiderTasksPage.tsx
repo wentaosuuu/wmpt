@@ -1,22 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DeliveryProofView } from '../../components/DeliveryProof'
 import { Empty, OrderNo, Tag } from '../../components/ui'
 import { sampleDeliveryProof } from '../../lib/proof'
-import { money, statusText, storeById } from '../../lib/utils'
+import {
+  normalizeRiderTab,
+  riderStageLabel,
+  riderTabOf,
+  riderTabs,
+  type RiderTabId,
+} from '../../lib/riderStage'
+import { money, storeById } from '../../lib/utils'
 import { useApp } from '../../store/AppStore'
 
-const tabs = [
-  { id: 'pool', label: '待接单' },
-  { id: 'doing', label: '进行中' },
-  { id: 'done', label: '已完成' },
-] as const
+const tabs = riderTabs
 
-type TabId = (typeof tabs)[number]['id']
-
-function isTabId(v: string | null): v is TabId {
-  return tabs.some((t) => t.id === v)
-}
+type TabId = RiderTabId
 
 function formatDist(km: number) {
   if (km < 1) return `${Math.round(km * 1000)}m`
@@ -48,48 +47,25 @@ function NavIcon() {
 }
 
 export function RiderTasksPage() {
-  const { orders, riderClaim, riderDeliver, riderComplete, toast } = useApp()
+  const { orders, riderOnline, riderClaim, riderArrive, riderDeliver, riderComplete, toast } = useApp()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [tab, setTab] = useState<TabId>(() => {
-    const q = searchParams.get('tab')
-    return isTabId(q) ? q : 'pool'
-  })
+  const tab = normalizeRiderTab(searchParams.get('tab'))
   const [completeId, setCompleteId] = useState<string | null>(null)
   const [proofPreview, setProofPreview] = useState('')
   const [proofSrc, setProofSrc] = useState<string | null>(null)
 
-  useEffect(() => {
-    const q = searchParams.get('tab')
-    if (isTabId(q) && q !== tab) setTab(q)
-  }, [searchParams, tab])
-
   const counts = useMemo(() => {
-    const pool = orders.filter((o) => ['preparing', 'ready'].includes(o.status) && !o.rider).length
-    const doing = orders.filter(
-      (o) =>
-        o.rider?.name === '李骑手' &&
-        ['preparing', 'ready', 'picked', 'delivering'].includes(o.status),
-    ).length
-    const done = orders.filter((o) => o.rider?.name === '李骑手' && o.status === 'delivered').length
-    return { pool, doing, done }
+    const base = { pool: 0, heading: 0, arrived: 0, delivering: 0, done: 0, cancelled: 0 }
+    for (const order of orders) {
+      const stage = riderTabOf(order)
+      if (stage) base[stage] += 1
+    }
+    return base
   }, [orders])
 
-  const list = useMemo(() => {
-    if (tab === 'pool') {
-      return orders.filter((o) => ['preparing', 'ready'].includes(o.status) && !o.rider)
-    }
-    if (tab === 'doing') {
-      return orders.filter(
-        (o) =>
-          o.rider?.name === '李骑手' &&
-          ['preparing', 'ready', 'picked', 'delivering'].includes(o.status),
-      )
-    }
-    return orders.filter((o) => o.rider?.name === '李骑手' && o.status === 'delivered')
-  }, [orders, tab])
+  const list = useMemo(() => orders.filter((o) => riderTabOf(o) === tab), [orders, tab])
 
   function switchTab(id: TabId) {
-    setTab(id)
     setSearchParams(id === 'pool' ? {} : { tab: id }, { replace: true })
   }
 
@@ -98,7 +74,7 @@ export function RiderTasksPage() {
       <header className="page-title-bar">
         <h1>订单处理</h1>
       </header>
-      <div className="seg underline">
+      <div className="seg underline rider-tabs">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -114,10 +90,6 @@ export function RiderTasksPage() {
 
       {list.map((o) => {
         const store = storeById(o.storeId)
-        const canPickup =
-          tab === 'doing' &&
-          ['preparing', 'ready', 'picked'].includes(o.status) &&
-          !!o.pickupNo
         const pickupKm = store?.distanceKm ?? 1
         const deliverKm = Math.round((pickupKm + 0.6) * 10) / 10
         const pickupPlace = store?.address || o.storeName
@@ -130,14 +102,32 @@ export function RiderTasksPage() {
           <div key={o.id} className="card role-order">
             <div className="row">
               <OrderNo id={o.id} short />
-              <Tag tone={tab === 'pool' ? 'orange' : 'blue'}>{statusText(o.status)}</Tag>
+              <Tag
+                tone={
+                  tab === 'cancelled'
+                    ? 'gray'
+                    : tab === 'pool' || tab === 'arrived'
+                      ? 'orange'
+                      : tab === 'done'
+                        ? 'green'
+                        : 'blue'
+                }
+              >
+                {riderStageLabel(tab)}
+              </Tag>
             </div>
 
-            {o.pickupNo ? (
-              <div className={`pickup-no-banner rider${o.status === 'ready' ? ' highlight' : ''}`}>
+            {tab === 'cancelled' ? (
+              <div className="pickup-no-waiting">
+                用户已取消{o.cancelReason ? `：${o.cancelReason}` : '，无需继续配送'}
+              </div>
+            ) : o.pickupNo ? (
+              <div className={`pickup-no-banner rider${tab === 'arrived' ? ' highlight' : ''}`}>
                 <span>取餐号</span>
                 <strong>{o.pickupNo}</strong>
-                <em>{o.status === 'ready' ? '到店报号取餐' : '凭号核对'}</em>
+                <em>
+                  {tab === 'arrived' ? '到店报号取餐' : tab === 'heading' ? '到店后报号' : '凭号核对'}
+                </em>
               </div>
             ) : o.status === 'preparing' ? (
               <div className="pickup-no-waiting">商家备餐中，出餐后生成取餐号</div>
@@ -150,14 +140,16 @@ export function RiderTasksPage() {
                   <b>{o.storeName}</b>
                   <em>{formatDist(pickupKm)}</em>
                 </div>
-                <button
-                  className="rider-nav-btn"
-                  type="button"
-                  aria-label="导航到门店"
-                  onClick={() => openMapNav(pickupPlace, toast)}
-                >
-                  <NavIcon />
-                </button>
+                {tab !== 'cancelled' ? (
+                  <button
+                    className="rider-nav-btn"
+                    type="button"
+                    aria-label="导航到门店"
+                    onClick={() => openMapNav(pickupPlace, toast)}
+                  >
+                    <NavIcon />
+                  </button>
+                ) : null}
               </div>
               <div className="rider-route-row">
                 <span className="deliver">送</span>
@@ -165,14 +157,16 @@ export function RiderTasksPage() {
                   <b>{deliverPlace}</b>
                   <em>{formatDist(deliverKm)}</em>
                 </div>
-                <button
-                  className="rider-nav-btn"
-                  type="button"
-                  aria-label="导航到收货地址"
-                  onClick={() => openMapNav(deliverPlace, toast)}
-                >
-                  <NavIcon />
-                </button>
+                {tab !== 'cancelled' ? (
+                  <button
+                    className="rider-nav-btn"
+                    type="button"
+                    aria-label="导航到收货地址"
+                    onClick={() => openMapNav(deliverPlace, toast)}
+                  >
+                    <NavIcon />
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -185,9 +179,13 @@ export function RiderTasksPage() {
             {o.remark ? <p className="kitchen-order-remark">订单备注：{o.remark}</p> : null}
 
             <div className="merchant-order-meta">
-              <p>
-                {o.address.name} {o.address.phone}
-              </p>
+              {tab === 'delivering' || tab === 'done' ? (
+                <p>
+                  {o.address.name} {o.address.phone}
+                </p>
+              ) : (
+                <p className="muted">收货人信息在配送中后可见</p>
+              )}
               {o.rider?.location ? <p>{o.rider.location}</p> : null}
             </div>
 
@@ -203,21 +201,53 @@ export function RiderTasksPage() {
 
             <div className="role-actions">
               {tab === 'pool' ? (
-                <button className="btn" type="button" onClick={() => riderClaim(o.id)}>
-                  接单去门店
+                riderOnline ? (
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => {
+                      riderClaim(o.id)
+                      switchTab('heading')
+                    }}
+                  >
+                    接单去门店
+                  </button>
+                ) : (
+                  <p className="merchant-wait-tip" style={{ flex: 1, margin: 0 }}>
+                    已停止听单，切换回骑手端并开启听单后可抢单
+                  </p>
+                )
+              ) : null}
+              {tab === 'heading' ? (
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => {
+                    riderArrive(o.id)
+                    switchTab('arrived')
+                  }}
+                >
+                  我已到店
                 </button>
               ) : null}
-              {tab === 'doing' && o.status === 'preparing' && !o.pickupNo ? (
+              {tab === 'arrived' && !o.pickupNo ? (
                 <p className="merchant-wait-tip" style={{ flex: 1, margin: 0 }}>
-                  等待商家出餐后，凭取餐号确认取餐
+                  已到店，等待商家出餐后凭取餐号确认取餐
                 </p>
               ) : null}
-              {canPickup ? (
-                <button className="btn" type="button" onClick={() => riderDeliver(o.id)}>
+              {tab === 'arrived' && o.pickupNo ? (
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => {
+                    riderDeliver(o.id)
+                    switchTab('delivering')
+                  }}
+                >
                   确认取餐
                 </button>
               ) : null}
-              {tab === 'doing' && o.status === 'delivering' ? (
+              {tab === 'delivering' ? (
                 <button
                   className="btn"
                   type="button"
@@ -290,8 +320,7 @@ export function RiderTasksPage() {
                   riderComplete(completeId, proofPreview)
                   setCompleteId(null)
                   setProofPreview('')
-                  setSearchParams({ tab: 'done' }, { replace: true })
-                  setTab('done')
+                  switchTab('done')
                 }}
               >
                 提交并确认送达

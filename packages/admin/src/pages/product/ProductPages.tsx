@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
-import { UTENSIL_OPTIONS } from '../../lib/options'
 import { useAdmin } from '../../store/AdminStore'
 import type { DishCategory, DishSpec, Product } from '../../types'
 
 function useStoreFilter() {
   const { merchants } = useAdmin()
-  const stores = merchants.filter((m) => m.type === 'branch' && m.status === 'approved')
+  const stores = merchants.filter((m) => m.status === 'approved')
   const [storeId, setStoreId] = useState(() => stores[0]?.id ?? '')
   const effectiveId = storeId && stores.some((s) => s.id === storeId) ? storeId : stores[0]?.id ?? ''
   return {
@@ -97,16 +96,18 @@ export function DishesPage() {
       storeId: store.id,
       storeName: store.name,
       name: '',
+      description: '',
       categoryId: cat.id,
       category: cat.name,
       price: 0,
       packingFee: 0,
-      utensils: UTENSIL_OPTIONS[0],
+      utensils: '',
       stock: 50,
       soldOut: false,
       onShelf: false,
       specIds: [spec.id],
       spec: spec.name,
+      photo: '',
     })
     setMode('edit')
   }
@@ -155,11 +156,11 @@ export function DishesPage() {
                     aria-label="全选"
                   />
                 </th>
+                <th>图片</th>
                 <th>菜品</th>
                 <th>分类</th>
                 <th>价格</th>
                 <th>规格</th>
-                <th>餐具</th>
                 <th>上架状态</th>
                 <th>操作</th>
               </tr>
@@ -175,11 +176,17 @@ export function DishesPage() {
                       aria-label={`选择 ${p.name}`}
                     />
                   </td>
+                  <td>
+                    {p.photo ? (
+                      <img className="dish-photo-thumb" src={p.photo} alt="" />
+                    ) : (
+                      <span className="dish-photo-thumb empty">无图</span>
+                    )}
+                  </td>
                   <td>{p.name}</td>
                   <td>{p.category}</td>
                   <td>¥{p.price.toFixed(2)}</td>
                   <td>{p.spec}</td>
-                  <td>{p.utensils}</td>
                   <td>
                     <StatusTag tone={p.onShelf ? 'success' : 'default'}>
                       {p.onShelf ? '已上架' : '已下架'}
@@ -269,6 +276,10 @@ export function DishesPage() {
                   notify('请填写菜品名称，并选择分类与规格')
                   return
                 }
+                if (!form.description.trim()) {
+                  notify('请填写商品描述')
+                  return
+                }
                 const cat = storeCats.find((c) => c.id === form.categoryId)
                 const selected = storeSpecs.filter((s) => form.specIds.includes(s.id))
                 saveProduct({
@@ -317,26 +328,27 @@ export function DishesPage() {
                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) || 0 })}
               />
             </Field>
-            <Field label="餐具">
-              <select
-                value={form.utensils}
-                onChange={(e) => setForm({ ...form, utensils: e.target.value })}
-              >
-                {UTENSIL_OPTIONS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-            </Field>
             <Field label="初始库存">
               <input
                 type="number"
-                min={0}
+                step={1}
                 value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) || 0 })}
+                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
               />
             </Field>
+            <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+              <label>商品描述</label>
+              <p className="attach-hint" style={{ marginTop: 0 }}>
+                显示在移动端菜品详情与菜单列表中，请填写真实商品说明。
+              </p>
+              <textarea
+                rows={3}
+                maxLength={120}
+                placeholder="如：经典波霸奶茶，甜度冰量请写在备注。"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
             <div className="form-field" style={{ gridColumn: '1 / -1' }}>
               <label>可选规格（可多选）</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 13 }}>
@@ -356,6 +368,56 @@ export function DishesPage() {
                     {s.extraPrice ? ` (+¥${s.extraPrice})` : ''}
                   </label>
                 ))}
+              </div>
+            </div>
+            <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+              <label>菜品图片</label>
+              <p className="attach-hint" style={{ marginTop: 0 }}>
+                用于移动端菜单列表与菜品详情展示，建议上传正方形清晰图。
+              </p>
+              <div className="door-photo-edit">
+                {form.photo ? (
+                  <img className="dish-photo-preview" src={form.photo} alt="菜品预览" />
+                ) : (
+                  <div className="dish-photo-preview empty">暂无图片</div>
+                )}
+                <div className="door-photo-actions">
+                  <label className="btn ghost door-photo-upload">
+                    {form.photo ? '更换图片' : '上传图片'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        e.target.value = ''
+                        if (!file) return
+                        if (!file.type.startsWith('image/')) {
+                          notify('请选择图片文件')
+                          return
+                        }
+                        if (file.size > 2 * 1024 * 1024) {
+                          notify('图片请控制在 2MB 以内')
+                          return
+                        }
+                        const reader = new FileReader()
+                        reader.onload = () => {
+                          setForm({ ...form, photo: String(reader.result || '') })
+                        }
+                        reader.readAsDataURL(file)
+                      }}
+                    />
+                  </label>
+                  {form.photo ? (
+                    <button
+                      className="link-btn danger"
+                      type="button"
+                      onClick={() => setForm({ ...form, photo: '' })}
+                    >
+                      移除
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
@@ -819,7 +881,7 @@ export function StockPage() {
     <>
       <PageHeader
         title="库存售罄"
-        desc="先选择门店，再维护该门店菜品库存与售罄状态。"
+        desc="库存可为负数；是否禁止消费者下单只看「售罄」标记，与库存数字无关。"
         extra={
           <button
             className="btn"
@@ -862,8 +924,28 @@ export function StockPage() {
               <tr>
                 <th>菜品</th>
                 <th>规格</th>
-                <th>库存</th>
-                <th>售罄</th>
+                <th>
+                  库存
+                  <i
+                    className="tip-icon"
+                    tabIndex={0}
+                    data-tip="库存允许为负数，仅作账面数量参考，不会单独禁止下单。"
+                    aria-label="库存说明"
+                  >
+                    ?
+                  </i>
+                </th>
+                <th>
+                  售卖状态
+                  <i
+                    className="tip-icon"
+                    tabIndex={0}
+                    data-tip="标记「售罄」后，用户端不可下单；恢复「可售」后即可下单。与库存是否为负无关。"
+                    aria-label="售卖状态说明"
+                  >
+                    ?
+                  </i>
+                </th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -872,7 +954,7 @@ export function StockPage() {
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>{p.spec}</td>
-                  <td>{p.stock}</td>
+                  <td className={p.stock < 0 ? 'stock-neg' : undefined}>{p.stock}</td>
                   <td>
                     <StatusTag tone={p.soldOut ? 'danger' : 'success'}>
                       {p.soldOut ? '售罄' : '可售'}
@@ -929,8 +1011,12 @@ export function StockPage() {
               type="button"
               onClick={() => {
                 if (!current) return
-                updateProduct(current.id, { stock, soldOut: stock <= 0 })
-                notify('库存已更新并同步用户端')
+                if (!Number.isFinite(stock)) {
+                  notify('请输入有效的库存数量')
+                  return
+                }
+                updateProduct(current.id, { stock: Math.floor(stock) })
+                notify('库存已更新（不影响售罄状态）')
                 setMode(null)
               }}
             >
@@ -943,8 +1029,16 @@ export function StockPage() {
           <input value={current?.name ?? ''} disabled />
         </Field>
         <Field label="库存数量">
-          <input type="number" min={0} value={stock} onChange={(e) => setStock(Number(e.target.value) || 0)} />
+          <input
+            type="number"
+            step={1}
+            value={stock}
+            onChange={(e) => setStock(Number(e.target.value))}
+          />
         </Field>
+        <p style={{ margin: '8px 0 0', fontSize: 13, color: '#86909c' }}>
+          允许负数。修改库存不会自动改售罄状态；禁止用户下单请用「标记售罄」。
+        </p>
       </Modal>
 
       <Modal
@@ -962,11 +1056,12 @@ export function StockPage() {
               onClick={() => {
                 if (!current) return
                 const soldOut = !current.soldOut
-                updateProduct(current.id, {
-                  soldOut,
-                  stock: soldOut ? 0 : Math.max(current.stock, 1),
-                })
-                notify(soldOut ? '已标记售罄并同步用户端' : '已恢复可售')
+                updateProduct(current.id, { soldOut })
+                notify(
+                  soldOut
+                    ? '已标记售罄：用户端不可下单（库存数字不变）'
+                    : '已恢复可售：用户端可下单',
+                )
                 setMode(null)
               }}
             >
@@ -976,7 +1071,9 @@ export function StockPage() {
         }
       >
         <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
-          确认将「{current?.name}」{current?.soldOut ? '恢复可售' : '标记为售罄'}？
+          {current?.soldOut
+            ? `确认将「${current?.name}」恢复可售？恢复后消费者可下单，当前库存 ${current?.stock} 不变。`
+            : `确认将「${current?.name}」标记为售罄？标记后消费者不可下单，当前库存 ${current?.stock} 不变。`}
         </p>
       </Modal>
 
@@ -994,17 +1091,13 @@ export function StockPage() {
               type="button"
               onClick={() => {
                 const n = Math.floor(Number(batchStock))
-                if (!Number.isFinite(n) || n < 0) {
+                if (!Number.isFinite(n)) {
                   notify('请输入有效的库存数量')
                   return
                 }
-                storeProducts.forEach((p) =>
-                  updateProduct(p.id, { stock: n, soldOut: n <= 0 }),
-                )
+                storeProducts.forEach((p) => updateProduct(p.id, { stock: n }))
                 notify(
-                  `已将「${store?.name ?? '当前门店'}」${storeProducts.length} 道菜品库存设为 ${n}${
-                    n <= 0 ? '（已售罄）' : ''
-                  }`,
+                  `已将「${store?.name ?? '当前门店'}」${storeProducts.length} 道菜品库存设为 ${n}（售罄状态不变）`,
                 )
                 setMode(null)
               }}
@@ -1023,15 +1116,14 @@ export function StockPage() {
         <Field label="统一库存数量">
           <input
             type="number"
-            min={0}
             step={1}
             value={batchStock}
             onChange={(e) => setBatchStock(e.target.value)}
-            placeholder="例如 50"
+            placeholder="例如 50，可为负数"
           />
         </Field>
         <p style={{ margin: '0 0 4px', fontSize: 13, color: '#86909c' }}>
-          将覆盖该门店下全部菜品的库存；设为 0 时自动标记售罄，大于 0 时恢复可售。
+          仅批量改库存数字，不会改各菜品的售罄 / 可售状态。
         </p>
       </Modal>
     </>
@@ -1045,7 +1137,7 @@ export function PackingPage() {
   const [fee, setFee] = useState('1')
 
   const stores = useMemo(
-    () => merchants.filter((m) => m.type === 'branch' && m.status === 'approved'),
+    () => merchants.filter((m) => m.status === 'approved'),
     [merchants],
   )
   const list = useMemo(

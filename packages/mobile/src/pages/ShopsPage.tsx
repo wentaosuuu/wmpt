@@ -1,29 +1,39 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CatIcon } from '../components/CatIcon'
+import { StoreCover } from '../components/StoreCover'
 import { Tag } from '../components/ui'
-import { categoryChips, distances, sortOptions, stores, type StoreSortKey } from '../mock'
+import { useCuisineCategories } from '../hooks/useCuisineCategories'
+import { distances, sortOptions, stores, type StoreSortKey } from '../mock'
 import { sortStores } from '../lib/storeFilter'
 import { money } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
 export function ShopsPage() {
-  const { addresses } = useApp()
+  const { addresses, storeConfigRev } = useApp()
+  const { chips } = useCuisineCategories()
   const [keyword, setKeyword] = useState('')
   const [cuisine, setCuisine] = useState('全部')
   const [distance, setDistance] = useState(99)
   const [sort, setSort] = useState<StoreSortKey>('distance')
   const addr = addresses.find((a) => a.isDefault) ?? addresses[0]
 
+  useEffect(() => {
+    if (chips.length && !chips.some((c) => c.id === cuisine)) {
+      setCuisine(chips[0]?.id ?? '全部')
+    }
+  }, [chips, cuisine])
+
   const list = useMemo(() => {
     const filtered = stores.filter((s) => {
-      if (!s.takeoutEnabled) return false
+      if (!s.takeoutEnabled || !s.frontListed) return false
       if (cuisine !== '全部' && s.cuisine !== cuisine) return false
       if (s.distanceKm > distance) return false
       if (keyword && !s.name.includes(keyword) && !s.cuisine.includes(keyword)) return false
       return true
     })
     return sortStores(filtered, sort)
-  }, [keyword, cuisine, distance, sort])
+  }, [keyword, cuisine, distance, sort, storeConfigRev])
 
   return (
     <section className="page shops-page">
@@ -46,14 +56,16 @@ export function ShopsPage() {
       </div>
 
       <div className="cat-quick compact">
-        {categoryChips.map((c) => (
+        {chips.map((c) => (
           <button
             key={c.id}
             type="button"
             className={`cat-quick-item ${cuisine === c.id ? 'on' : ''}`}
             onClick={() => setCuisine(c.id)}
           >
-            <span className="cat-quick-icon">{c.icon}</span>
+            <span className="cat-quick-icon">
+              <CatIcon icon={c.icon} />
+            </span>
             <em>{c.label}</em>
           </button>
         ))}
@@ -88,7 +100,7 @@ export function ShopsPage() {
       <div className="shop-list">
         {list.map((s) => (
           <Link key={s.id} to={`/store/${s.id}`} className="shop-card">
-            <div className="shop-logo">{s.cover}</div>
+            <StoreCover className="shop-logo" doorPhoto={s.doorPhoto} cover={s.cover} alt={s.name} />
             <div className="shop-info">
               <div className="shop-top">
                 <div>
@@ -103,20 +115,12 @@ export function ShopsPage() {
                 <Tag tone={s.status === 'open' ? 'green' : 'gray'}>
                   {s.status === 'open' ? '营业中' : '歇业中'}
                 </Tag>
-                <span>★ {s.rating}</span>
                 <span>月售 {s.monthlySales}</span>
-                <span>约 {s.etaMin} 分钟</span>
               </div>
               <div className="shop-fees">
                 <span>起送 {money(s.minOrder)}</span>
                 <span>配送 {money(s.deliveryFee)}</span>
-                {s.tags.map((t) => (
-                  <span key={t} className="promo">
-                    {t}
-                  </span>
-                ))}
               </div>
-              <p className="shop-addr">{s.address}</p>
             </div>
           </Link>
         ))}

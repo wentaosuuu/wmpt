@@ -8,7 +8,22 @@ import {
   merchantDepts,
   sortDeptsTree,
 } from '../../lib/dept'
-import type { SysDept, SysRole, SysUser } from '../../types'
+import type { CuisineCategory, SysDept, SysRole, SysUser } from '../../types'
+
+function isImageIcon(icon: string) {
+  return /^(data:|https?:|\/)/.test(icon)
+}
+
+function CuisineIcon({ icon, className }: { icon: string; className?: string }) {
+  if (isImageIcon(icon)) {
+    return <img className={className} src={icon} alt="" />
+  }
+  return (
+    <span className={className} aria-hidden>
+      {icon || '🍽'}
+    </span>
+  )
+}
 
 export function UsersPage() {
   const { sysUsers, depts, roles, saveSysUser, updateSysUser, notify } = useAdmin()
@@ -684,6 +699,251 @@ export function RolesPage() {
       >
         <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
           确认{current?.status === 'enabled' ? '停用' : '启用'}角色「{current?.name}」吗？
+        </p>
+      </Modal>
+    </>
+  )
+}
+
+export function CuisineCategoriesPage() {
+  const {
+    cuisineCategories,
+    saveCuisineCategory,
+    updateCuisineCategory,
+    removeCuisineCategory,
+    notify,
+  } = useAdmin()
+  const [kw, setKw] = useState('')
+  const [form, setForm] = useState<CuisineCategory | null>(null)
+  const [removeId, setRemoveId] = useState<string | null>(null)
+
+  const list = useMemo(() => {
+    const filtered = cuisineCategories.filter((c) => !kw || c.name.includes(kw))
+    return [...filtered].sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'zh'))
+  }, [cuisineCategories, kw])
+
+  return (
+    <>
+      <PageHeader
+        title="品类管理"
+        desc="配置移动端首页品类快捷入口的名称与图标；门店入驻时的经营品类也取自此处。"
+        extra={
+          <button
+            className="btn"
+            type="button"
+            onClick={() =>
+              setForm({
+                id: `cc${Date.now()}`,
+                name: '',
+                icon: '🍽',
+                sort: Math.max(0, ...cuisineCategories.map((c) => c.sort)) + 1,
+                enabled: true,
+              })
+            }
+          >
+            新增品类
+          </button>
+        }
+      />
+      <Panel>
+        <Toolbar>
+          <input placeholder="搜索品类名称" value={kw} onChange={(e) => setKw(e.target.value)} />
+        </Toolbar>
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>图标</th>
+                <th>品类名称</th>
+                <th>排序</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    <CuisineIcon icon={c.icon} className="cuisine-icon-thumb" />
+                  </td>
+                  <td>
+                    {c.name}
+                    {c.isAll ? (
+                      <span style={{ marginLeft: 8, fontSize: 12, color: '#86909c' }}>固定入口</span>
+                    ) : null}
+                  </td>
+                  <td>{c.sort}</td>
+                  <td>
+                    <StatusTag tone={c.enabled ? 'success' : 'default'}>
+                      {c.enabled ? '启用' : '停用'}
+                    </StatusTag>
+                  </td>
+                  <td className="ops">
+                    <button className="link-btn" type="button" onClick={() => setForm({ ...c })}>
+                      编辑
+                    </button>
+                    {!c.isAll ? (
+                      <>
+                        <button
+                          className="link-btn"
+                          type="button"
+                          onClick={() => {
+                            updateCuisineCategory(c.id, { enabled: !c.enabled })
+                            notify(c.enabled ? '已停用' : '已启用')
+                          }}
+                        >
+                          {c.enabled ? '停用' : '启用'}
+                        </button>
+                        <button
+                          className="link-btn danger"
+                          type="button"
+                          onClick={() => setRemoveId(c.id)}
+                        >
+                          删除
+                        </button>
+                      </>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+              {!list.length ? (
+                <tr>
+                  <td colSpan={5}>
+                    <div className="empty-block">暂无品类</div>
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
+      <Modal
+        open={!!form}
+        title={cuisineCategories.some((c) => c.id === form?.id) ? '编辑品类' : '新增品类'}
+        onClose={() => setForm(null)}
+        footer={
+          <>
+            <button className="btn ghost" type="button" onClick={() => setForm(null)}>
+              取消
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                if (!form?.name.trim()) {
+                  notify('请填写品类名称')
+                  return
+                }
+                if (!form.icon) {
+                  notify('请上传品类图标')
+                  return
+                }
+                const dup = cuisineCategories.some(
+                  (c) => c.id !== form.id && c.name === form.name.trim(),
+                )
+                if (dup) {
+                  notify('品类名称已存在')
+                  return
+                }
+                saveCuisineCategory({ ...form, name: form.name.trim() })
+                notify('品类已保存，移动端将同步展示')
+                setForm(null)
+              }}
+            >
+              保存
+            </button>
+          </>
+        }
+      >
+        {form ? (
+          <>
+            <Field label="品类名称">
+              <input
+                value={form.name}
+                disabled={!!form.isAll}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="如：奶茶、粉面"
+              />
+            </Field>
+            <Field label="排序">
+              <input
+                type="number"
+                value={form.sort}
+                onChange={(e) => setForm({ ...form, sort: Number(e.target.value) || 0 })}
+              />
+            </Field>
+            <Field label="品类图标">
+              <div className="door-photo-edit">
+                <CuisineIcon icon={form.icon} className="cuisine-icon-preview" />
+                <div className="door-photo-actions">
+                  <label className="btn ghost door-photo-upload">
+                    {isImageIcon(form.icon) ? '更换图片' : '上传图片'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        e.target.value = ''
+                        if (!file) return
+                        if (file.size > 2 * 1024 * 1024) {
+                          notify('图片请小于 2MB')
+                          return
+                        }
+                        const reader = new FileReader()
+                        reader.onload = () => {
+                          setForm({ ...form, icon: String(reader.result || '') })
+                        }
+                        reader.readAsDataURL(file)
+                      }}
+                    />
+                  </label>
+                  {isImageIcon(form.icon) ? (
+                    <button
+                      className="btn ghost"
+                      type="button"
+                      onClick={() => setForm({ ...form, icon: '🍽' })}
+                    >
+                      清除图片
+                    </button>
+                  ) : null}
+                  <p style={{ margin: 0, fontSize: 12, color: '#86909c' }}>
+                    建议正方形图片，移动端首页品类栏展示
+                  </p>
+                </div>
+              </div>
+            </Field>
+          </>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={!!removeId}
+        title="删除品类"
+        onClose={() => setRemoveId(null)}
+        footer={
+          <>
+            <button className="btn ghost" type="button" onClick={() => setRemoveId(null)}>
+              取消
+            </button>
+            <button
+              className="btn danger"
+              type="button"
+              onClick={() => {
+                if (!removeId) return
+                removeCuisineCategory(removeId)
+                notify('品类已删除')
+                setRemoveId(null)
+              }}
+            >
+              确认删除
+            </button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
+          删除后移动端将不再展示该品类入口，确认删除？
         </p>
       </Modal>
     </>

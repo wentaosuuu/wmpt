@@ -106,7 +106,7 @@ function exportTradesCsv(rows: TradeRecord[]) {
 
 export function TradeFlowPage() {
   const { trades, merchants, notify } = useAdmin()
-  const stores = merchants.filter((m) => m.type === 'branch')
+  const stores = merchants.filter((m) => m.status === 'approved')
   const [draft, setDraft] = useState<TradeFilters>(emptyFilters)
   const [applied, setApplied] = useState<TradeFilters>(emptyFilters)
   const [current, setCurrent] = useState<TradeRecord | null>(null)

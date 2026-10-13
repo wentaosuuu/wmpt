@@ -27,6 +27,14 @@ export type Merchant = {
   qualStatus: 'valid' | 'expiring' | 'pending' | 'rejected'
   license: string
   expireAt: string
+  /** 门牌照片（data URL 或图片地址），移动端列表/详情展示 */
+  doorPhoto?: string
+  /** 起送费（元）：消费者餐品金额未达此值不可下单 */
+  minOrder: number
+  /** 配送费（元），与移动端展示一致 */
+  deliveryFee: number
+  /** 经营品类（与移动端品类筛选一致） */
+  cuisine: string
   /** 保证金（元） */
   deposit: number
   /** 每笔订单统一包装费（元），非按菜品计 */
@@ -61,8 +69,10 @@ export type StoreAttachment = {
 
 export type StoreApplication = {
   id: string
+  /** 入驻类型：总店 / 分店（分店须挂所属总店） */
+  applyType: 'hq' | 'branch'
   name: string
-  /** 所属商家（对应部门三级：门店节点名称） */
+  /** 分店所属总店名称 */
   parentMerchant: string
   /** 市 / 区 / 街道 */
   city: string
@@ -93,6 +103,18 @@ export type DishCategory = {
   enabled: boolean
 }
 
+/** 移动端首页品类快捷入口（系统级配置） */
+export type CuisineCategory = {
+  id: string
+  name: string
+  /** 图标：emoji 或上传后的 data URL / 图片地址 */
+  icon: string
+  sort: number
+  enabled: boolean
+  /** 「全部」入口，不可删除 / 改名 */
+  isAll?: boolean
+}
+
 export type DishSpec = {
   id: string
   storeId: string
@@ -107,6 +129,8 @@ export type Product = {
   storeId: string
   storeName: string
   name: string
+  /** 商品描述，移动端菜品详情展示 */
+  description: string
   categoryId: string
   category: string
   price: number
@@ -117,6 +141,8 @@ export type Product = {
   onShelf: boolean
   specIds: string[]
   spec: string
+  /** 菜品图片（data URL），移动端菜单/详情展示 */
+  photo?: string
 }
 
 export type AdminOrderStatus =
@@ -182,7 +208,8 @@ export type Ticket = {
   type: 'consult' | 'complaint'
   user: string
   content: string
-  status: 'open' | 'processing' | 'done'
+  /** open=待处理，done=已完结 */
+  status: 'open' | 'done'
   handler: string
   result: string
   createdAt: string

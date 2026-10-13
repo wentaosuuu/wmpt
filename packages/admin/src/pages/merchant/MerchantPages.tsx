@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
 import {
   districtsOf,
@@ -7,11 +7,12 @@ import {
   regionTree,
   streetsOf,
 } from '../../data/regionTree'
-import { CUISINE_OPTIONS, joinHours, splitHours } from '../../lib/options'
+import { joinHours, splitHours } from '../../lib/options'
 import { useAdmin } from '../../store/AdminStore'
 import type { Merchant, StoreApplication, StoreAttachment } from '../../types'
 
 const emptyApply = {
+  applyType: 'branch' as 'hq' | 'branch',
   name: '',
   parentMerchant: '',
   city: '',
@@ -46,7 +47,16 @@ function nowStamp() {
 }
 
 export function StoreApplyPage() {
-  const { applications, merchants, submitApplication, notify } = useAdmin()
+  const { applications, merchants, cuisineCategories, submitApplication, notify } = useAdmin()
+  const cuisineOptions = useMemo(
+    () =>
+      cuisineCategories
+        .filter((c) => c.enabled && !c.isAll)
+        .sort((a, b) => a.sort - b.sort)
+        .map((c) => c.name),
+    [cuisineCategories],
+  )
+  const [searchParams, setSearchParams] = useSearchParams()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyApply)
   const [openStart, setOpenStart] = useState('10:00')
@@ -66,10 +76,33 @@ export function StoreApplyPage() {
           a.contact.includes(kw) ||
           a.phone.includes(kw) ||
           a.license.includes(kw) ||
+          a.parentMerchant.includes(kw) ||
           a.id.includes(kw),
       ),
     [applications, kw],
   )
+
+  function openApply(applyType: 'hq' | 'branch', parentName = '') {
+    setForm({
+      ...emptyApply,
+      applyType,
+      parentMerchant: parentName,
+    })
+    setOpenStart('10:00')
+    setOpenEnd('20:00')
+    setAttachments([])
+    setOpen(true)
+  }
+
+  // 从门店管理「添加分店」带 ?hq= 跳转时预填总店并打开表单
+  useEffect(() => {
+    const hqId = searchParams.get('hq')
+    if (!hqId || !hqOptions.length) return
+    const hq = hqOptions.find((h) => h.id === hqId)
+    if (!hq) return
+    openApply('branch', hq.name)
+    setSearchParams({}, { replace: true })
+  }, [searchParams, hqOptions, setSearchParams])
 
   function addFiles(kind: StoreAttachment['kind'], files: FileList | null) {
     if (!files?.length) return
@@ -88,27 +121,22 @@ export function StoreApplyPage() {
     <>
       <PageHeader
         title="门店入驻"
-        desc="提交新门店入驻申请并上传资质附件，审核通过后进入门店管理。"
+        desc="提交总店或分店入驻申请并上传资质附件，管理员审核通过后进入门店管理。"
         extra={
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              setForm(emptyApply)
-              setOpenStart('10:00')
-              setOpenEnd('20:00')
-              setAttachments([])
-              setOpen(true)
-            }}
-          >
-            新建入驻申请
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn ghost" type="button" onClick={() => openApply('hq')}>
+              新建总店入驻
+            </button>
+            <button className="btn" type="button" onClick={() => openApply('branch')}>
+              新建分店入驻
+            </button>
+          </div>
         }
       />
       <Panel>
         <Toolbar>
           <input
-            placeholder="申请单号 / 门店 / 联系人 / 执照号"
+            placeholder="申请单号 / 门店 / 总店 / 联系人 / 执照号"
             value={kw}
             onChange={(e) => setKw(e.target.value)}
           />
@@ -118,12 +146,13 @@ export function StoreApplyPage() {
             <thead>
               <tr>
                 <th>申请单号</th>
+                <th>类型</th>
                 <th>门店名称</th>
+                <th>所属总店</th>
                 <th>联系人</th>
                 <th>附件</th>
                 <th>提交时间</th>
                 <th>状态</th>
-                <th>审核意见</th>
               </tr>
             </thead>
             <tbody>
@@ -131,9 +160,15 @@ export function StoreApplyPage() {
                 <tr key={a.id}>
                   <td>{a.id}</td>
                   <td>
+                    <StatusTag tone={a.applyType === 'hq' ? 'info' : 'default'}>
+                      {a.applyType === 'hq' ? '总店' : '分店'}
+                    </StatusTag>
+                  </td>
+                  <td>
                     {a.name}
                     <span className="sub">{a.address}</span>
                   </td>
+                  <td>{a.applyType === 'branch' ? a.parentMerchant || '-' : '—'}</td>
                   <td>
                     {a.contact}
                     <span className="sub">{a.phone}</span>
@@ -147,12 +182,11 @@ export function StoreApplyPage() {
                       {a.status === 'approved' ? '已通过' : a.status === 'rejected' ? '已驳回' : '待审核'}
                     </StatusTag>
                   </td>
-                  <td>{a.auditRemark || '-'}</td>
                 </tr>
               ))}
               {!mine.length ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="empty-block">暂无申请</div>
                   </td>
                 </tr>
@@ -164,7 +198,7 @@ export function StoreApplyPage() {
 
       <Modal
         open={open}
-        title="新建门店入驻申请"
+        title={form.applyType === 'hq' ? '新建总店入驻申请' : '新建分店入驻申请'}
         width={720}
         onClose={() => setOpen(false)}
         footer={
@@ -178,7 +212,7 @@ export function StoreApplyPage() {
               onClick={() => {
                 if (
                   !form.name ||
-                  !form.parentMerchant ||
+                  (form.applyType === 'branch' && !form.parentMerchant) ||
                   !form.contact ||
                   !form.phone ||
                   !form.city ||
@@ -187,7 +221,11 @@ export function StoreApplyPage() {
                   !form.addressDetail ||
                   !form.license
                 ) {
-                  notify('请完整填写门店、所属总店、联系人、电话、门店地址和执照号')
+                  notify(
+                    form.applyType === 'branch'
+                      ? '请完整填写分店、所属总店、联系人、电话、门店地址和执照号'
+                      : '请完整填写总店名称、联系人、电话、地址和执照号',
+                  )
                   return
                 }
                 if (!attachments.some((a) => a.kind === 'license')) {
@@ -197,11 +235,12 @@ export function StoreApplyPage() {
                 const region = formatRegionPath(form.city, form.district, form.street)
                 submitApplication({
                   ...form,
+                  parentMerchant: form.applyType === 'hq' ? '' : form.parentMerchant,
                   address: `${region} ${form.addressDetail.trim()}`,
                   hours: joinHours(openStart, openEnd),
                   attachments,
                 })
-                notify('入驻申请已提交，等待审核')
+                notify('入驻申请已提交，等待管理员审核')
                 setOpen(false)
               }}
             >
@@ -211,22 +250,28 @@ export function StoreApplyPage() {
         }
       >
         <div className="form-grid">
-          <Field label="分店名称">
+          <Field label={form.applyType === 'hq' ? '总店名称' : '分店名称'}>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>
-          <Field label="所属总店">
-            <select
-              value={form.parentMerchant}
-              onChange={(e) => setForm({ ...form, parentMerchant: e.target.value })}
-            >
-              <option value="">请选择总店</option>
-              {hqOptions.map((d) => (
-                <option key={d.id} value={d.name}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {form.applyType === 'branch' ? (
+            <Field label="所属总店">
+              <select
+                value={form.parentMerchant}
+                onChange={(e) => setForm({ ...form, parentMerchant: e.target.value })}
+              >
+                <option value="">请选择总店</option>
+                {hqOptions.map((d) => (
+                  <option key={d.id} value={d.name}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : (
+            <Field label="入驻类型">
+              <input value="总店" disabled />
+            </Field>
+          )}
           <Field label="联系人">
             <input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
           </Field>
@@ -235,7 +280,7 @@ export function StoreApplyPage() {
           </Field>
           <Field label="经营品类">
             <select value={form.cuisine} onChange={(e) => setForm({ ...form, cuisine: e.target.value })}>
-              {CUISINE_OPTIONS.map((c) => (
+              {cuisineOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
@@ -393,6 +438,7 @@ export function StoreAuditPage() {
           a.contact.includes(kw) ||
           a.phone.includes(kw) ||
           a.license.includes(kw) ||
+          a.parentMerchant.includes(kw) ||
           a.id.includes(kw)
         )
       }),
@@ -403,7 +449,7 @@ export function StoreAuditPage() {
     <>
       <PageHeader
         title="入驻审核"
-        desc="统一审核门店入驻与经营资质（执照）。通过后生成门店档案，资质记为有效，再去开通外卖与上架。"
+        desc="审核总店 / 分店入驻与资质附件。通过后生成对应档案，再到门店管理开通外卖与上架。"
       />
       <Panel>
         <Toolbar>
@@ -414,7 +460,7 @@ export function StoreAuditPage() {
             <option value="all">全部</option>
           </select>
           <input
-            placeholder="申请单号 / 门店 / 联系人 / 执照号"
+            placeholder="申请单号 / 门店 / 总店 / 联系人 / 执照号"
             value={kw}
             onChange={(e) => setKw(e.target.value)}
           />
@@ -424,7 +470,9 @@ export function StoreAuditPage() {
             <thead>
               <tr>
                 <th>申请单号</th>
+                <th>类型</th>
                 <th>门店</th>
+                <th>所属总店</th>
                 <th>执照</th>
                 <th>联系人</th>
                 <th>提交时间</th>
@@ -437,9 +485,15 @@ export function StoreAuditPage() {
                 <tr key={a.id}>
                   <td>{a.id}</td>
                   <td>
+                    <StatusTag tone={a.applyType === 'hq' ? 'info' : 'default'}>
+                      {a.applyType === 'hq' ? '总店' : '分店'}
+                    </StatusTag>
+                  </td>
+                  <td>
                     {a.name}
                     <span className="sub">{a.address}</span>
                   </td>
+                  <td>{a.applyType === 'branch' ? a.parentMerchant || '-' : '—'}</td>
                   <td>{a.license}</td>
                   <td>
                     {a.contact}
@@ -495,7 +549,7 @@ export function StoreAuditPage() {
               ))}
               {!list.length ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={9}>
                     <div className="empty-block">暂无申请</div>
                   </td>
                 </tr>
@@ -520,7 +574,14 @@ export function StoreAuditPage() {
             <DescList
               items={[
                 { label: '门店', value: current.name },
-                { label: '所属总店', value: current.parentMerchant },
+                {
+                  label: '类型',
+                  value: current.applyType === 'hq' ? '总店入驻' : '分店入驻',
+                },
+                {
+                  label: '所属总店',
+                  value: current.applyType === 'branch' ? current.parentMerchant || '-' : '—',
+                },
                 { label: '品类', value: current.cuisine },
                 {
                   label: '门店地址',
@@ -580,7 +641,11 @@ export function StoreAuditPage() {
               onClick={() => {
                 if (!current || !mode) return
                 auditApplication(current.id, mode === 'approve', remark)
-                notify(mode === 'approve' ? '已通过：门店已创建，资质记为有效' : '已驳回申请')
+                notify(
+                  mode === 'approve'
+                    ? `已通过：${current.applyType === 'hq' ? '总店' : '分店'}档案已创建`
+                    : '已驳回申请',
+                )
                 setMode(null)
               }}
             >
@@ -597,7 +662,7 @@ export function StoreAuditPage() {
         />
         {mode === 'approve' ? (
           <p style={{ fontSize: 13, color: '#86909c' }}>
-            通过即完成入驻与资质审核：创建门店档案、资质状态为有效、外卖默认关闭且未上架。后续在「门店管理」开通外卖，并用上架开关控制用户端可见。
+            通过即完成入驻与资质审核：按申请类型创建总店或分店档案、资质记为有效、外卖默认关闭且未上架。后续在「门店管理」开通外卖，并用上架开关控制用户端可见。
           </p>
         ) : null}
         <Field label="审核意见">
@@ -609,29 +674,16 @@ export function StoreAuditPage() {
 }
 
 export function StoresPage() {
-  const { merchants, merchantChangeLogs, updateMerchant, saveMerchant, notify } = useAdmin()
+  const { merchants, merchantChangeLogs, cuisineCategories, updateMerchant, saveMerchant, notify } =
+    useAdmin()
   const [kw, setKw] = useState('')
   const [levelFilter, setLevelFilter] = useState<'all' | 'hq' | 'branch'>('all')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [current, setCurrent] = useState<Merchant | null>(null)
-  const [mode, setMode] = useState<
-    'view' | 'toggle' | 'edit' | 'remind' | 'changelog' | 'createHq' | 'createBranch' | null
-  >(null)
+  const [mode, setMode] = useState<'view' | 'toggle' | 'edit' | 'remind' | 'changelog' | null>(null)
   const [form, setForm] = useState<Merchant | null>(null)
   const [editStart, setEditStart] = useState('10:00')
   const [editEnd, setEditEnd] = useState('20:00')
-  const [createForm, setCreateForm] = useState({
-    name: '',
-    contact: '',
-    phone: '',
-    address: '',
-    pickup: '',
-    license: '',
-    parentId: '',
-    hours: '10:00-20:00',
-  })
-  const [createStart, setCreateStart] = useState('10:00')
-  const [createEnd, setCreateEnd] = useState('20:00')
 
   const approved = useMemo(
     () => merchants.filter((m) => m.status === 'approved'),
@@ -688,60 +740,15 @@ export function StoresPage() {
     [merchantChangeLogs, current],
   )
 
-  function blankMerchant(type: 'hq' | 'branch', parentId?: string): Merchant {
-    const hq = parentId ? hqList.find((h) => h.id === parentId) : undefined
-    return {
-      id: `${type === 'hq' ? 'm' : 's'}${Date.now()}`,
-      name: createForm.name.trim(),
-      type,
-      parentId: type === 'branch' ? parentId : undefined,
-      parentName: type === 'branch' ? hq?.name : undefined,
-      takeout: type === 'branch',
-      frontListed: false,
-      address: createForm.address.trim() || '-',
-      pickup: type === 'hq' ? '-' : createForm.pickup.trim() || createForm.address.trim() || '-',
-      contact: createForm.contact.trim(),
-      phone: createForm.phone.trim(),
-      hours: joinHours(createStart, createEnd),
-      qualStatus: 'valid',
-      license: createForm.license.trim() || '-',
-      expireAt: '2027-12-31',
-      deposit: type === 'hq' ? 20000 : 5000,
-      orderPackingFee: type === 'branch' ? 1 : 0,
-      status: 'approved',
-    }
-  }
-
-  function openCreate(type: 'hq' | 'branch', parentId = '') {
-    setCreateForm({
-      name: '',
-      contact: '',
-      phone: '',
-      address: '',
-      pickup: '',
-      license: '',
-      parentId: parentId || hqList[0]?.id || '',
-      hours: '10:00-20:00',
-    })
-    setCreateStart('10:00')
-    setCreateEnd('20:00')
-    setMode(type === 'hq' ? 'createHq' : 'createBranch')
-  }
-
   return (
     <>
       <PageHeader
         title="门店管理"
-        desc="总店为品牌主体，分店挂在总店下承接外卖履约。列表按总店折叠展示分店。"
+        desc="维护门店信息与门牌照片（移动端列表封面）。新建总店 / 分店请到「门店入驻」提交审核。"
         extra={
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn ghost" type="button" onClick={() => openCreate('hq')}>
-              新建总店
-            </button>
-            <button className="btn" type="button" onClick={() => openCreate('branch')}>
-              新建分店
-            </button>
-          </div>
+          <Link className="btn" to="/merchants/apply">
+            去门店入驻
+          </Link>
         }
       />
       <Panel>
@@ -801,6 +808,11 @@ export function StoresPage() {
                         ) : depth ? (
                           <span className="store-branch-mark">└</span>
                         ) : null}
+                        {m.doorPhoto ? (
+                          <img className="door-photo-thumb" src={m.doorPhoto} alt="" />
+                        ) : (
+                          <span className="door-photo-thumb empty">无</span>
+                        )}
                         <div>
                           <strong>{m.name}</strong>
                           <span className="sub">
@@ -817,42 +829,34 @@ export function StoresPage() {
                       </StatusTag>
                     </td>
                     <td>
-                      {isHq ? (
-                        <span className="sub">—</span>
-                      ) : (
-                        <StatusTag tone={m.takeout ? 'success' : 'default'}>
-                          {m.takeout ? '已开通' : '未开通'}
-                        </StatusTag>
-                      )}
+                      <StatusTag tone={m.takeout ? 'success' : 'default'}>
+                        {m.takeout ? '已开通' : '未开通'}
+                      </StatusTag>
                     </td>
                     <td>
-                      {!isHq ? (
-                        <button
-                          type="button"
-                          className={`switch${m.frontListed ? ' on' : ''}`}
-                          disabled={!m.takeout && !m.frontListed}
-                          title={
-                            !m.takeout && !m.frontListed
-                              ? '请先开通外卖后再上架'
-                              : m.frontListed
-                                ? '已上架，点击下架'
-                                : '未上架，点击上架'
+                      <button
+                        type="button"
+                        className={`switch${m.frontListed ? ' on' : ''}`}
+                        disabled={!m.takeout && !m.frontListed}
+                        title={
+                          !m.takeout && !m.frontListed
+                            ? '请先开通外卖后再上架'
+                            : m.frontListed
+                              ? '已上架，点击下架'
+                              : '未上架，点击上架'
+                        }
+                        aria-label={m.frontListed ? '下架' : '上架'}
+                        onClick={() => {
+                          if (!m.frontListed && !m.takeout) {
+                            notify('请先开通外卖，再上架到移动端')
+                            return
                           }
-                          aria-label={m.frontListed ? '下架' : '上架'}
-                          onClick={() => {
-                            if (!m.frontListed && !m.takeout) {
-                              notify('请先开通外卖，再上架到移动端')
-                              return
-                            }
-                            updateMerchant(m.id, { frontListed: !m.frontListed })
-                            notify(m.frontListed ? '已从移动端下架' : '已上架，用户端可见该门店')
-                          }}
-                        >
-                          <span className="switch-knob" />
-                        </button>
-                      ) : (
-                        <span className="sub">—</span>
-                      )}
+                          updateMerchant(m.id, { frontListed: !m.frontListed })
+                          notify(m.frontListed ? '已从移动端下架' : '已上架，用户端可见该门店')
+                        }}
+                      >
+                        <span className="switch-knob" />
+                      </button>
                     </td>
                     <td>{m.hours}</td>
                     <td>¥{(m.deposit || 0).toLocaleString('zh-CN')}</td>
@@ -903,39 +907,32 @@ export function StoresPage() {
                         编辑
                       </button>
                       {isHq ? (
+                        <Link className="link-btn" to={`/merchants/apply?hq=${m.id}`}>
+                          添加分店
+                        </Link>
+                      ) : null}
+                      <button
+                        className="link-btn"
+                        type="button"
+                        onClick={() => {
+                          setCurrent(m)
+                          setMode('toggle')
+                        }}
+                      >
+                        {m.takeout ? '关闭外卖' : '开通外卖'}
+                      </button>
+                      {m.qualStatus === 'expiring' ? (
                         <button
                           className="link-btn"
                           type="button"
-                          onClick={() => openCreate('branch', m.id)}
+                          onClick={() => {
+                            setCurrent(m)
+                            setMode('remind')
+                          }}
                         >
-                          添加分店
+                          到期提醒
                         </button>
-                      ) : (
-                        <>
-                          <button
-                            className="link-btn"
-                            type="button"
-                            onClick={() => {
-                              setCurrent(m)
-                              setMode('toggle')
-                            }}
-                          >
-                            {m.takeout ? '关闭外卖' : '开通外卖'}
-                          </button>
-                          {m.qualStatus === 'expiring' ? (
-                            <button
-                              className="link-btn"
-                              type="button"
-                              onClick={() => {
-                                setCurrent(m)
-                                setMode('remind')
-                              }}
-                            >
-                              到期提醒
-                            </button>
-                          ) : null}
-                        </>
-                      )}
+                      ) : null}
                       <button
                         className="link-btn"
                         type="button"
@@ -961,9 +958,11 @@ export function StoresPage() {
           </table>
         </div>
         <p style={{ marginTop: 12, fontSize: 13, color: '#86909c' }}>
-          说明：总店不直接对 C 端上架；分店开通外卖并打开上架开关后，用户可在移动端看到。配送半径在
+          说明：总店与分店均可开通外卖并上架；新建分店须在
+          <Link to="/merchants/apply"> 门店入驻 </Link>
+          提交材料并由管理员审核。配送半径在
           <Link to="/delivery/coverage"> 覆盖区域 </Link>
-          按分店配置。
+          按门店配置。
         </p>
       </Panel>
 
@@ -978,30 +977,47 @@ export function StoresPage() {
         }
       >
         {current ? (
-          <DescList
-            items={[
-              { label: '名称', value: current.name },
-              { label: '层级', value: current.type === 'hq' ? '总店' : '分店' },
-              { label: '所属总店', value: current.parentName || '-' },
-              { label: '地址', value: current.address },
-              { label: '取餐点', value: current.pickup },
-              { label: '联系人', value: `${current.contact} ${current.phone}` },
-              { label: '营业时间', value: current.hours },
-              { label: '执照', value: current.license },
-              { label: '资质到期', value: current.expireAt },
-              { label: '保证金', value: `¥${(current.deposit || 0).toLocaleString('zh-CN')}` },
-              {
-                label: '外卖能力',
-                value:
-                  current.type === 'hq' ? '总店不承接外卖' : current.takeout ? '已开通' : '未开通',
-              },
-              {
-                label: '移动端上架',
-                value:
-                  current.type === 'hq' ? '—' : current.frontListed ? '已上架' : '未上架',
-              },
-            ]}
-          />
+          <>
+            <DescList
+              items={[
+                { label: '名称', value: current.name },
+                { label: '层级', value: current.type === 'hq' ? '总店' : '分店' },
+                { label: '所属总店', value: current.parentName || '-' },
+                { label: '地址', value: current.address },
+                { label: '取餐点', value: current.pickup },
+                { label: '联系人', value: `${current.contact} ${current.phone}` },
+                { label: '营业时间', value: current.hours },
+                { label: '执照', value: current.license },
+                { label: '资质到期', value: current.expireAt },
+                { label: '保证金', value: `¥${(current.deposit || 0).toLocaleString('zh-CN')}` },
+                {
+                  label: '起送费',
+                  value: `¥${(current.minOrder || 0).toLocaleString('zh-CN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`,
+                },
+                {
+                  label: '配送费',
+                  value: `¥${(current.deliveryFee || 0).toLocaleString('zh-CN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`,
+                },
+                { label: '经营品类', value: current.cuisine || '-' },
+                { label: '外卖能力', value: current.takeout ? '已开通' : '未开通' },
+                { label: '移动端上架', value: current.frontListed ? '已上架' : '未上架' },
+              ]}
+            />
+            <div className="door-photo-block" style={{ marginTop: 16 }}>
+              <div className="attach-section-title">门牌照片</div>
+              {current.doorPhoto ? (
+                <img className="door-photo-preview" src={current.doorPhoto} alt="门牌照片" />
+              ) : (
+                <div className="empty-block">未上传，移动端将使用默认封面</div>
+              )}
+            </div>
+          </>
         ) : null}
       </Modal>
 
@@ -1029,6 +1045,11 @@ export function StoresPage() {
                   notify('请输入有效的已缴纳保证金金额')
                   return
                 }
+                const minOrder = Number(form.minOrder)
+                if (!Number.isFinite(minOrder) || minOrder < 0) {
+                  notify('请输入有效的起送费')
+                  return
+                }
                 let parentName = form.parentName
                 let parentId = form.parentId
                 if (form.type === 'branch' && form.parentId) {
@@ -1041,6 +1062,7 @@ export function StoresPage() {
                   parentId,
                   parentName,
                   deposit: Math.round(deposit),
+                  minOrder: Math.round(minOrder * 100) / 100,
                   hours: joinHours(editStart, editEnd),
                 })
                 notify('门店信息已保存')
@@ -1123,117 +1145,101 @@ export function StoresPage() {
                 onChange={(e) => setForm({ ...form, deposit: Number(e.target.value) })}
               />
             </Field>
+            <Field label="起送费（元）">
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={form.minOrder}
+                onChange={(e) => setForm({ ...form, minOrder: Number(e.target.value) })}
+              />
+              <p className="attach-hint" style={{ marginTop: 6 }}>
+                消费者餐品金额未达起送费时不可下单（不含配送费、包装费）
+              </p>
+            </Field>
+            <Field label="配送费（元）">
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={form.deliveryFee}
+                onChange={(e) => setForm({ ...form, deliveryFee: Number(e.target.value) })}
+              />
+            </Field>
+            <Field label="经营品类">
+              <select
+                value={form.cuisine}
+                onChange={(e) => setForm({ ...form, cuisine: e.target.value })}
+              >
+                {cuisineCategories
+                  .filter((c) => c.enabled && !c.isAll)
+                  .sort((a, b) => a.sort - b.sort)
+                  .map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
             <Field label="营业开始">
               <input type="time" value={editStart} onChange={(e) => setEditStart(e.target.value)} />
             </Field>
             <Field label="营业结束">
               <input type="time" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} />
             </Field>
+            <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+              <label>门牌照片</label>
+              <p className="attach-hint" style={{ marginTop: 0 }}>
+                用于移动端门店列表与详情封面展示，建议上传清晰门头/门牌图。
+              </p>
+              <div className="door-photo-edit">
+                {form.doorPhoto ? (
+                  <img className="door-photo-preview" src={form.doorPhoto} alt="门牌预览" />
+                ) : (
+                  <div className="door-photo-preview empty">暂无照片</div>
+                )}
+                <div className="door-photo-actions">
+                  <label className="btn ghost door-photo-upload">
+                    {form.doorPhoto ? '更换照片' : '上传照片'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        e.target.value = ''
+                        if (!file) return
+                        if (!file.type.startsWith('image/')) {
+                          notify('请选择图片文件')
+                          return
+                        }
+                        if (file.size > 3 * 1024 * 1024) {
+                          notify('图片请控制在 3MB 以内')
+                          return
+                        }
+                        const reader = new FileReader()
+                        reader.onload = () => {
+                          setForm({ ...form, doorPhoto: String(reader.result || '') })
+                          notify('门牌照片已选择，保存后门店生效')
+                        }
+                        reader.readAsDataURL(file)
+                      }}
+                    />
+                  </label>
+                  {form.doorPhoto ? (
+                    <button
+                      className="link-btn danger"
+                      type="button"
+                      onClick={() => setForm({ ...form, doorPhoto: '' })}
+                    >
+                      移除
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
         ) : null}
-      </Modal>
-
-      <Modal
-        open={mode === 'createHq' || mode === 'createBranch'}
-        title={mode === 'createHq' ? '新建总店' : '新建分店'}
-        width={560}
-        onClose={() => setMode(null)}
-        footer={
-          <>
-            <button className="btn ghost" type="button" onClick={() => setMode(null)}>
-              取消
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                if (!createForm.name.trim() || !createForm.contact.trim() || !createForm.phone.trim()) {
-                  notify('请填写名称、联系人和电话')
-                  return
-                }
-                if (mode === 'createBranch' && !createForm.parentId) {
-                  notify('请选择所属总店')
-                  return
-                }
-                if (createStart >= createEnd) {
-                  notify('结束时间需晚于开始时间')
-                  return
-                }
-                const m = blankMerchant(
-                  mode === 'createHq' ? 'hq' : 'branch',
-                  createForm.parentId || undefined,
-                )
-                saveMerchant(m)
-                notify(mode === 'createHq' ? '总店已创建' : '分店已创建')
-                setMode(null)
-              }}
-            >
-              创建
-            </button>
-          </>
-        }
-      >
-        <div className="form-grid">
-          <Field label={mode === 'createHq' ? '总店名称' : '分店名称'}>
-            <input
-              value={createForm.name}
-              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-            />
-          </Field>
-          {mode === 'createBranch' ? (
-            <Field label="所属总店">
-              <select
-                value={createForm.parentId}
-                onChange={(e) => setCreateForm({ ...createForm, parentId: e.target.value })}
-              >
-                <option value="">请选择</option>
-                {hqList.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          ) : null}
-          <Field label="联系人">
-            <input
-              value={createForm.contact}
-              onChange={(e) => setCreateForm({ ...createForm, contact: e.target.value })}
-            />
-          </Field>
-          <Field label="电话">
-            <input
-              value={createForm.phone}
-              onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-            />
-          </Field>
-          <Field label="地址">
-            <input
-              value={createForm.address}
-              onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-            />
-          </Field>
-          {mode === 'createBranch' ? (
-            <Field label="取餐地址">
-              <input
-                value={createForm.pickup}
-                onChange={(e) => setCreateForm({ ...createForm, pickup: e.target.value })}
-              />
-            </Field>
-          ) : null}
-          <Field label="营业执照号">
-            <input
-              value={createForm.license}
-              onChange={(e) => setCreateForm({ ...createForm, license: e.target.value })}
-            />
-          </Field>
-          <Field label="营业开始">
-            <input type="time" value={createStart} onChange={(e) => setCreateStart(e.target.value)} />
-          </Field>
-          <Field label="营业结束">
-            <input type="time" value={createEnd} onChange={(e) => setCreateEnd(e.target.value)} />
-          </Field>
-        </div>
       </Modal>
 
       <Modal

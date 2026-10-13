@@ -9,10 +9,10 @@ export function DashboardPage() {
     ['ready', 'dispatching', 'delivering', 'dispatch_fail'].includes(o.status),
   ).length
   const after =
-    orders.filter((o) => ['refund_review', 'cancel_review'].includes(o.status)).length +
+    orders.filter((o) => o.status === 'cancel_review').length +
     tickets.filter((t) => t.status !== 'done').length
   const applyPending = applications.filter((a) => a.status === 'pending').length
-  const stores = merchants.filter((m) => m.takeout && m.type === 'branch').length
+  const stores = merchants.filter((m) => m.takeout).length
 
   return (
     <>
@@ -43,13 +43,13 @@ export function DashboardPage() {
           <div className="label">售后待处理</div>
           <div className="value">{after}</div>
           <div className="hint">
-            <Link to="/aftersale/refund">去审核</Link>
+            <Link to="/aftersale/tickets">去处理</Link>
           </div>
         </div>
       </div>
       <p style={{ margin: '0 0 12px', fontSize: 13, color: '#86909c' }}>
         外卖开通 {stores} 家 · 移动端上架{' '}
-        {merchants.filter((m) => m.type === 'branch' && m.frontListed).length} 家
+        {merchants.filter((m) => m.frontListed).length} 家
       </p>
     </>
   )

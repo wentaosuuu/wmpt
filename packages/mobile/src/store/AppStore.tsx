@@ -1,32 +1,57 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
-import { currentUser, defaultAddresses, seedOrders } from '../mock'
 import {
-  buildEtaRange,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import { currentUser, defaultAddresses, dishes, seedOrders } from '../mock'
+import { applyDishDescriptions } from '../lib/dishDescSync'
+import { applyDishPhotos } from '../lib/dishPhotoSync'
+import { applyStoreMinOrders } from '../lib/minOrderSync'
+import { RIDER_AT_STORE, RIDER_NAME, RIDER_TO_STORE } from '../lib/riderStage'
+import { submitTicket } from '../lib/ticketApi'
+import {
+  canApplyRefund,
+  canCancel,
   cartKey,
   cartTotals,
+  findUnavailableCartItems,
   minimumOrderShortfall,
   nextOrderId,
   nowLabel,
-  storeById,
 } from '../lib/utils'
-import type { Address, AppRole, CartItem, Order, OrderStatus, PayChannel, User } from '../types'
+import type { Address, AppRole, CartItem, Order, OrderStatus, PayChannel, TicketType, User } from '../types'
 
 type Toast = { id: number; text: string }
 
-const RIDER_PROFILE = { name: '李骑手', phone: '13900001111', location: '园区配送站' }
+const RIDER_PROFILE = { name: RIDER_NAME, phone: '13900001111', location: '园区配送站' }
 
 type AppContextValue = {
   user: User | null
   role: AppRole
+  /** 骑手听单中；切到消费者后自动关闭，无法继续抢单 */
+  riderOnline: boolean
   cart: CartItem[]
   addresses: Address[]
   orders: Order[]
   toasts: Toast[]
-  setRole: (role: AppRole, silent?: boolean) => void
+  /** 门店起送费等配置版本，变化时列表/结算页应刷新 */
+  storeConfigRev: number
+  setRole: (role: AppRole, silent?: boolean) => boolean
+  setRiderOnline: (online: boolean) => void
+  canUseRole: (role: AppRole) => boolean
   toast: (text: string) => void
   addToCart: (item: Omit<CartItem, 'key' | 'qty'>, qty?: number, quiet?: boolean) => void
   changeQty: (key: string, delta: number) => void
   clearCart: () => void
+  removeCartKeys: (keys: string[]) => void
+  /** Demo：把指定菜品标记为售罄/下架，便于演示异常页 */
+  simulateDelistDishes: (dishIds: string[]) => number
+  /** Demo：把购物车中的菜品标记为售罄/下架 */
+  simulateDelistCartDishes: () => number
   saveAddress: (address: Address) => void
   removeAddress: (id: string) => void
   setDefaultAddress: (id: string) => void
@@ -34,7 +59,7 @@ type AppContextValue = {
   payOrder: (id: string, channel: PayChannel) => void
   cancelOrder: (id: string, reason: string) => void
   applyRefund: (id: string, reason: string) => void
-  addTicket: (orderId: string | undefined, content: string) => void
+  addTicket: (orderId: string | undefined, content: string, type: TicketType) => void
   /** 商家：接单 */
   merchantAccept: (id: string) => void
   /** 商家：拒单 */
@@ -86,10 +111,35 @@ function nextPickupNo(orders: Order[]) {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user] = useState<User | null>(currentUser)
   const [role, setRoleState] = useState<AppRole>('consumer')
+  const [riderOnline, setRiderOnlineState] = useState(false)
   const [cart, setCart] = useState<CartItem[]>([])
   const [addresses, setAddresses] = useState<Address[]>(defaultAddresses)
   const [orders, setOrders] = useState<Order[]>(seedOrders)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [storeConfigRev, setStoreConfigRev] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    const pull = async () => {
+      const [minChanged, photoChanged, descChanged] = await Promise.all([
+        applyStoreMinOrders(),
+        applyDishPhotos(),
+        applyDishDescriptions(),
+      ])
+      if (alive && (minChanged || photoChanged || descChanged)) setStoreConfigRev((n) => n + 1)
+    }
+    void pull()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void pull()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    const timer = window.setInterval(() => void pull(), 8000)
+    return () => {
+      alive = false
+      document.removeEventListener('visibilitychange', onVisible)
+      window.clearInterval(timer)
+    }
+  }, [])
 
   const toast = useCallback((text: string) => {
     const id = Date.now()
@@ -99,14 +149,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 2200)
   }, [])
 
+  const canUseRole = useCallback(
+    (target: AppRole) => {
+      if (target === 'consumer') return true
+      if (target === 'merchant') return !!user?.merchantEnabled
+      if (target === 'rider') return !!user?.riderEnabled
+      return false
+    },
+    [user],
+  )
+
+  const setRiderOnline = useCallback((online: boolean) => {
+    setRiderOnlineState(online)
+  }, [])
+
   const setRole = useCallback(
     (next: AppRole, silent = false) => {
+      if (!canUseRole(next)) {
+        if (!silent) {
+          toast(
+            next === 'merchant'
+              ? '需后台商家入驻审核通过后才能成为商家'
+              : '需后台完成骑手注册并启用后才能成为骑手',
+          )
+        }
+        return false
+      }
       setRoleState(next)
+      if (next === 'rider') setRiderOnlineState(true)
+      else if (role === 'rider') setRiderOnlineState(false)
       if (!silent) {
         toast(`已切换为${next === 'consumer' ? '消费者' : next === 'merchant' ? '商家' : '骑手'}视角`)
       }
+      return true
     },
-    [toast],
+    [canUseRole, role, toast],
   )
 
   const addToCart = useCallback(
@@ -137,6 +214,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setCart([]), [])
 
+  const removeCartKeys = useCallback((keys: string[]) => {
+    const set = new Set(keys)
+    setCart((prev) => prev.filter((i) => !set.has(i.key)))
+  }, [])
+
+  const simulateDelistDishes = useCallback((dishIds: string[]) => {
+    const ids = [...new Set(dishIds)]
+    let n = 0
+    for (const id of ids) {
+      const dish = dishes.find((d) => d.id === id)
+      if (dish && !dish.soldOut) {
+        dish.soldOut = true
+        n += 1
+      }
+    }
+    if (n) setStoreConfigRev((v) => v + 1)
+    return n
+  }, [])
+
+  const simulateDelistCartDishes = useCallback(() => {
+    return simulateDelistDishes(cart.map((i) => i.dishId))
+  }, [cart, simulateDelistDishes])
+
   const saveAddress = useCallback((address: Address) => {
     setAddresses((prev) => {
       const exists = prev.some((a) => a.id === address.id)
@@ -159,6 +259,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const createOrder = useCallback(
     (address: Address, remark: string) => {
       if (!cart.length) return null
+      if (findUnavailableCartItems(cart).length) {
+        toast('购物车有菜品已下架或售罄，请先处理')
+        return null
+      }
       const totals = cartTotals(cart)
       if (!totals.store) return null
       if (totals.shortfall > 0) {
@@ -174,7 +278,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return null
       }
       const createdAt = nowLabel()
-      const etaRange = buildEtaRange(createdAt, totals.store.etaMin)
       const order: Order = {
         id: nextOrderId(),
         storeId: totals.store.id,
@@ -198,7 +301,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         extraFee: totals.extraFee,
         dishAmount: totals.dishAmount,
         payable: totals.payable,
-        etaRange,
         timeline: [{ time: createdAt.slice(11), title: '订单已提交', desc: '请在 15 分钟内完成支付' }],
       }
       setOrders((prev) => [order, ...prev])
@@ -214,57 +316,98 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (o.id !== id || o.status !== 'pending_pay' || minimumOrderShortfall(o.storeId, o.dishAmount) !== 0) {
           return o
         }
-        const etaMin = storeById(o.storeId)?.etaMin ?? 35
-        const etaRange = o.etaRange || buildEtaRange(o.createdAt, etaMin)
         return patchOrder(
           o,
           'pending_accept',
           {
             title: '支付成功',
-            desc: `${channel === 'wechat' ? '微信' : '支付宝'}支付 ${o.payable.toFixed(2)} 元，预计 ${etaRange} 送达`,
+            desc: `${channel === 'wechat' ? '微信' : '支付宝'}支付 ${o.payable.toFixed(2)} 元`,
           },
-          { payChannel: channel, etaRange },
+          { payChannel: channel },
         )
       }),
     )
   }, [])
 
-  const cancelOrder = useCallback((id: string, reason: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id
-          ? patchOrder(o, 'cancelled', { title: '用户申请取消', desc: reason }, { cancelReason: reason })
-          : o,
-      ),
-    )
-  }, [])
+  const cancelOrder = useCallback(
+    (id: string, reason: string) => {
+      setOrders((prev) => {
+        const target = prev.find((o) => o.id === id)
+        if (!target || !canCancel(target.status)) {
+          toast('当前订单状态不可取消')
+          return prev
+        }
+        return prev.map((o) => {
+          if (o.id !== id) return o
+          return patchOrder(
+            o,
+            'cancelled',
+            { title: '用户申请取消', desc: reason },
+            {
+              cancelReason: reason,
+              rider: o.rider ? { ...o.rider, location: '订单已取消' } : o.rider,
+            },
+          )
+        })
+      })
+    },
+    [toast],
+  )
 
-  const applyRefund = useCallback((id: string, reason: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id && o.status === 'delivered' && !o.refund
-          ? patchOrder(
-              o,
-              'refunding',
-              { title: '已申请退款', desc: `${reason}，全额退款 ¥${o.payable.toFixed(2)}` },
-              {
-                refund: {
-                  id: `R${Date.now()}`,
-                  amount: o.payable,
-                  reason,
-                  status: 'pending',
-                  expected: o.payable,
-                  createdAt: nowLabel(),
+  const applyRefund = useCallback(
+    (id: string, reason: string) => {
+      setOrders((prev) => {
+        const target = prev.find((o) => o.id === id)
+        const canReapply = target?.refund?.status === 'rejected'
+        if (!target || !canApplyRefund(target.status) || (target.refund && !canReapply)) {
+          toast('当前订单状态不可申请退款')
+          return prev
+        }
+        const midWay = ['ready', 'picked', 'delivering'].includes(target.status)
+        return prev.map((o) =>
+          o.id === id
+            ? patchOrder(
+                o,
+                'refunding',
+                {
+                  title: midWay ? '已申请取消' : '已申请退款',
+                  desc: `${reason}，全额退款 ¥${o.payable.toFixed(2)}，待商家审核`,
                 },
-              },
-            )
-          : o,
-      ),
-    )
-  }, [])
+                {
+                  statusBeforeRefund: o.status,
+                  refund: {
+                    id: `R${Date.now()}`,
+                    amount: o.payable,
+                    reason,
+                    status: 'pending',
+                    expected: o.payable,
+                    createdAt: nowLabel(),
+                  },
+                },
+              )
+            : o,
+        )
+      })
+    },
+    [toast],
+  )
 
   const addTicket = useCallback(
-    (orderId: string | undefined, content: string) => {
+    (orderId: string | undefined, content: string, type: TicketType) => {
+      const typeLabel = type === 'complaint' ? '投诉' : '咨询'
+      const stamp = nowLabel()
+      const ticketId = `${type === 'complaint' ? 'TS' : 'CS'}${Date.now().toString().slice(-6)}`
+      void submitTicket({
+        id: ticketId,
+        type,
+        user: user?.name || '消费者',
+        content: orderId ? `【订单 ${orderId}】${content}` : content,
+        status: 'open',
+        handler: '-',
+        result: '',
+        createdAt: stamp,
+        orderId,
+      })
       if (orderId) {
         setOrders((prev) =>
           prev.map((o) =>
@@ -273,16 +416,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   ...o,
                   timeline: [
                     ...o.timeline,
-                    { time: nowLabel().slice(11), title: '已联系客服', desc: content },
+                    {
+                      time: stamp.slice(11),
+                      title: `已提交客服${typeLabel}`,
+                      desc: content,
+                    },
                   ],
                 }
               : o,
           ),
         )
       }
-      toast('已提交客服工单，工作时间 2 小时内回复')
+      toast(`已提交${typeLabel}工单，工作时间 2 小时内回复`)
     },
-    [toast],
+    [toast, user],
   )
 
   const merchantAccept = useCallback(
@@ -351,6 +498,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             },
             {
               refund: { ...o.refund, status: 'returned' },
+              statusBeforeRefund: undefined,
+              rider: o.rider ? { ...o.rider, location: '订单已退款取消' } : o.rider,
             },
           )
         }),
@@ -365,12 +514,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOrders((prev) =>
         prev.map((o) => {
           if (o.id !== id || o.status !== 'refunding' || !o.refund) return o
+          const restore = o.statusBeforeRefund ?? 'delivered'
           return patchOrder(
             o,
-            'delivered',
-            { title: '商家驳回退款', desc: reason },
+            restore,
+            { title: '商家驳回退款', desc: `${reason}；用户如有异议可联系客服` },
             {
               refund: { ...o.refund, status: 'rejected' },
+              statusBeforeRefund: undefined,
             },
           )
         }),
@@ -404,12 +555,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const riderClaim = useCallback(
     (id: string) => {
+      if (role !== 'rider' || !riderOnline) {
+        toast('已离开骑手听单，无法继续抢单')
+        return
+      }
       setOrders((prev) =>
         prev.map((o) =>
           o.id === id
             ? {
                 ...o,
-                rider: { ...RIDER_PROFILE, location: '前往门店途中' },
+                rider: { ...RIDER_PROFILE, location: RIDER_TO_STORE },
                 timeline: [
                   ...o.timeline,
                   {
@@ -424,7 +579,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
       toast('已接配送单，请尽快到店')
     },
-    [toast],
+    [role, riderOnline, toast],
   )
 
   const riderArrive = useCallback(
@@ -434,7 +589,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           o.id === id
             ? {
                 ...o,
-                rider: { ...(o.rider ?? RIDER_PROFILE), location: '已到店，等待交餐' },
+                rider: { ...(o.rider ?? RIDER_PROFILE), location: RIDER_AT_STORE },
                 timeline: [
                   ...o.timeline,
                   { time: nowLabel().slice(11), title: '骑手已到店', desc: '请凭取餐号取餐' },
@@ -503,15 +658,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       role,
+      riderOnline,
       cart,
       addresses,
       orders,
       toasts,
+      storeConfigRev,
       setRole,
+      setRiderOnline,
+      canUseRole,
       toast,
       addToCart,
       changeQty,
       clearCart,
+      removeCartKeys,
+      simulateDelistDishes,
+      simulateDelistCartDishes,
       saveAddress,
       removeAddress,
       setDefaultAddress,
@@ -534,15 +696,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [
       user,
       role,
+      riderOnline,
       cart,
       addresses,
       orders,
       toasts,
+      storeConfigRev,
       setRole,
+      setRiderOnline,
+      canUseRole,
       toast,
       addToCart,
       changeQty,
       clearCart,
+      removeCartKeys,
+      simulateDelistDishes,
+      simulateDelistCartDishes,
       saveAddress,
       removeAddress,
       setDefaultAddress,

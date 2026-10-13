@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from './layout/AdminLayout'
-import { RefundPage, TicketsPage } from './pages/aftersale/AftersalePages'
+import { TicketsPage } from './pages/aftersale/AftersalePages'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoveragePage, ExceptionPage } from './pages/delivery/DeliveryPages'
 import { TradeFlowPage } from './pages/finance/FinancePages'
@@ -12,7 +12,12 @@ import { CancelAuditPage } from './pages/order/OrderPages'
 import { CategoriesPage, DishesPage, PackingPage, SpecsPage, StockPage } from './pages/product/ProductPages'
 import { ProfilePage } from './pages/ProfilePage'
 import { RidersPage } from './pages/rider/RiderPages'
-import { DeptsPage, RolesPage, UsersPage } from './pages/system/SystemPages'
+import {
+  CuisineCategoriesPage,
+  DeptsPage,
+  RolesPage,
+  UsersPage,
+} from './pages/system/SystemPages'
 import { AdminProvider, useAdmin } from './store/AdminStore'
 import './App.css'
 
@@ -72,8 +77,8 @@ function App() {
               <Route path="delivery/dispatch" element={<Navigate to="/delivery/exception" replace />} />
               <Route path="delivery/track" element={<Navigate to="/delivery/exception" replace />} />
 
-              <Route path="aftersale/refund" element={<RefundPage />} />
               <Route path="aftersale/tickets" element={<TicketsPage />} />
+              <Route path="aftersale/refund" element={<Navigate to="/aftersale/tickets" replace />} />
               <Route path="aftersale/complaint" element={<Navigate to="/aftersale/tickets" replace />} />
 
               <Route path="finance/trades" element={<TradeFlowPage />} />
@@ -89,6 +94,7 @@ function App() {
               <Route path="system/users" element={<UsersPage />} />
               <Route path="system/depts" element={<DeptsPage />} />
               <Route path="system/roles" element={<RolesPage />} />
+              <Route path="system/cuisines" element={<CuisineCategoriesPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

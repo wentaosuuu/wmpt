@@ -5,6 +5,7 @@ import { AddressListPage } from './pages/AddressListPage'
 import { BillDetailPage } from './pages/BillDetailPage'
 import { BillsPage } from './pages/BillsPage'
 import { CartPage } from './pages/CartPage'
+import { CartUnavailablePage } from './pages/CartUnavailablePage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { DishPage } from './pages/DishPage'
 import { HomePage } from './pages/HomePage'
@@ -52,6 +53,7 @@ function App() {
             <Route path="address/new" element={<AddressEditPage />} />
             <Route path="address/:id" element={<AddressEditPage />} />
             <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="cart/unavailable" element={<CartUnavailablePage />} />
             <Route path="pay/:id" element={<PayPage />} />
             <Route path="order/:id" element={<OrderDetailPage />} />
             <Route path="track/:id" element={<TrackPage />} />

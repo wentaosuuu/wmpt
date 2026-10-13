@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DishCover } from '../components/DishCover'
+import { StoreCover } from '../components/StoreCover'
 import { NavBar, QtyStepper, Tag } from '../components/ui'
 import { dishes } from '../mock'
-import { cartKey, minimumOrderShortfall, money, storeById } from '../lib/utils'
+import { minimumOrderShortfall, money, storeById } from '../lib/utils'
 import { useApp } from '../store/AppStore'
-import type { Dish } from '../types'
 
 export function StorePage() {
   const { id = '' } = useParams()
   const store = storeById(id)
   const navigate = useNavigate()
-  const { cart, addToCart, changeQty } = useApp()
+  const { cart, changeQty, storeConfigRev } = useApp()
   const list = useMemo(() => dishes.filter((d) => d.storeId === id), [id])
+  void storeConfigRev
   const cats = useMemo(() => Array.from(new Set(list.map((d) => d.category))), [list])
   const [cat, setCat] = useState(cats[0] ?? '')
   const [cartOpen, setCartOpen] = useState(false)
@@ -37,41 +39,6 @@ export function StorePage() {
   const closed = store.status === 'closed'
   const shortfall = minimumOrderShortfall(store.id, amount)
 
-  function dishQty(dish: Dish) {
-    const spec = dish.specs[0]?.name ?? '标准份'
-    const key = cartKey(dish.id, spec, '')
-    return storeCart.find((i) => i.key === key)?.qty ?? 0
-  }
-
-  function plus(dish: Dish) {
-    const spec = dish.specs[0]?.name ?? '标准份'
-    const key = cartKey(dish.id, spec, '')
-    const existing = storeCart.find((i) => i.key === key)
-    if (existing) changeQty(existing.key, 1)
-    else {
-      addToCart(
-        {
-          storeId: store!.id,
-          dishId: dish.id,
-          name: dish.name,
-          spec,
-          remark: '',
-          price: dish.price + (dish.specs[0]?.extra ?? 0),
-          packingFee: 0,
-        },
-        1,
-        true,
-      )
-    }
-  }
-
-  function minus(dish: Dish) {
-    const spec = dish.specs[0]?.name ?? '标准份'
-    const key = cartKey(dish.id, spec, '')
-    const existing = storeCart.find((i) => i.key === key)
-    if (existing) changeQty(existing.key, -1)
-  }
-
   function toggleCart() {
     if (!qty) return
     setCartOpen((v) => !v)
@@ -96,9 +63,7 @@ export function StorePage() {
               </Tag>
             ))}
           </div>
-          <p>
-            ★ {store.rating} · 月售 {store.monthlySales} · 约 {store.etaMin} 分钟
-          </p>
+          <p>月售 {store.monthlySales}</p>
           <p>
             起送 {money(store.minOrder)} · 配送 {money(store.deliveryFee)} · 包装{' '}
             {money(store.orderPackingFee)}/单
@@ -107,7 +72,12 @@ export function StorePage() {
           <p className="muted">地址：{store.address}</p>
           <p className="muted">电话：{store.phone}</p>
         </div>
-        <div className="store-hero-logo">{store.cover}</div>
+        <StoreCover
+          className="store-hero-logo"
+          doorPhoto={store.doorPhoto}
+          cover={store.cover}
+          alt={store.name}
+        />
       </div>
 
       <div className="menu-split">
@@ -128,7 +98,12 @@ export function StorePage() {
           <h3>{activeCat}</h3>
           {shown.map((d) => (
             <div key={d.id} className="menu-dish">
-              <div className="menu-dish-cover">{d.cover ?? '🍽'}</div>
+              <DishCover
+                className="menu-dish-cover"
+                photo={d.photo}
+                cover={d.cover}
+                alt={d.name}
+              />
               <div className="menu-dish-body">
                 <Link to={`/dish/${d.id}`}>
                   <h4>{d.name}</h4>
@@ -139,12 +114,15 @@ export function StorePage() {
                   {d.soldOut ? (
                     <Tag tone="gray">售罄</Tag>
                   ) : (
-                    <QtyStepper
-                      value={dishQty(d)}
-                      disabled={closed}
-                      onMinus={() => minus(d)}
-                      onPlus={() => plus(d)}
-                    />
+                    <Link
+                      to={`/dish/${d.id}`}
+                      className={`menu-spec-btn ${closed ? 'disabled' : ''}`}
+                      onClick={(e) => {
+                        if (closed) e.preventDefault()
+                      }}
+                    >
+                      选规格
+                    </Link>
                   )}
                 </div>
               </div>

@@ -19,7 +19,7 @@ export function CoveragePage() {
   )
   const [current, setCurrent] = useState<Coverage | null>(null)
   const [radiusKm, setRadiusKm] = useState('3')
-  const [mode, setMode] = useState<'edit' | 'toggle' | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
 
   function storeAddress(id: string) {
     return merchants.find((m) => m.id === id)?.address ?? '—'
@@ -50,7 +50,6 @@ export function CoveragePage() {
                 <th>门店</th>
                 <th>配送中心</th>
                 <th>配送半径</th>
-                <th>状态</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -60,11 +59,6 @@ export function CoveragePage() {
                   <td>{c.storeName}</td>
                   <td>{storeAddress(c.storeId)}</td>
                   <td>{c.radiusKm} 公里</td>
-                  <td>
-                    <StatusTag tone={c.enabled ? 'success' : 'default'}>
-                      {c.enabled ? '已开通' : '已停用'}
-                    </StatusTag>
-                  </td>
                   <td className="ops">
                     <button
                       className="link-btn"
@@ -72,20 +66,10 @@ export function CoveragePage() {
                       onClick={() => {
                         setCurrent(c)
                         setRadiusKm(String(c.radiusKm))
-                        setMode('edit')
+                        setEditOpen(true)
                       }}
                     >
                       编辑半径
-                    </button>
-                    <button
-                      className="link-btn"
-                      type="button"
-                      onClick={() => {
-                        setCurrent(c)
-                        setMode('toggle')
-                      }}
-                    >
-                      {c.enabled ? '停用' : '开通'}
                     </button>
                   </td>
                 </tr>
@@ -96,12 +80,12 @@ export function CoveragePage() {
       </Panel>
 
       <Modal
-        open={mode === 'edit' && !!current}
+        open={editOpen && !!current}
         title="编辑配送半径"
-        onClose={() => setMode(null)}
+        onClose={() => setEditOpen(false)}
         footer={
           <>
-            <button className="btn ghost" type="button" onClick={() => setMode(null)}>
+            <button className="btn ghost" type="button" onClick={() => setEditOpen(false)}>
               取消
             </button>
             <button
@@ -116,7 +100,7 @@ export function CoveragePage() {
                 }
                 updateCoverage(current.storeId, { radiusKm: Math.round(n * 10) / 10 })
                 notify('配送半径已保存')
-                setMode(null)
+                setEditOpen(false)
               }}
             >
               保存
@@ -142,35 +126,6 @@ export function CoveragePage() {
         </Field>
         <p style={{ margin: '0 0 4px', fontSize: 13, color: '#86909c' }}>
           以门店地址为圆心，该半径内的收货地址均可配送。
-        </p>
-      </Modal>
-
-      <Modal
-        open={mode === 'toggle' && !!current}
-        title={current?.enabled ? '停用配送服务' : '开通配送服务'}
-        onClose={() => setMode(null)}
-        footer={
-          <>
-            <button className="btn ghost" type="button" onClick={() => setMode(null)}>
-              取消
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                if (!current) return
-                updateCoverage(current.storeId, { enabled: !current.enabled })
-                notify(current.enabled ? '已关闭该店配送服务' : '已开通配送服务')
-                setMode(null)
-              }}
-            >
-              确认
-            </button>
-          </>
-        }
-      >
-        <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
-          确认对「{current?.storeName}」{current?.enabled ? '停用' : '开通'}配送服务？
         </p>
       </Modal>
     </>

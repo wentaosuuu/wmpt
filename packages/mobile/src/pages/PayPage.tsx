@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { NavBar, OrderNo } from '../components/ui'
-import { minimumOrderShortfall, money } from '../lib/utils'
+import { findUnavailableOrderItems, minimumOrderShortfall, money } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 import type { PayChannel } from '../types'
 
 export function PayPage() {
   const { id = '' } = useParams()
-  const { orders, payOrder, toast } = useApp()
+  const { orders, payOrder, toast, storeConfigRev } = useApp()
   const order = orders.find((o) => o.id === id)
   const navigate = useNavigate()
   const [channel, setChannel] = useState<PayChannel>('wechat')
   const [left, setLeft] = useState(15 * 60)
+  void storeConfigRev
 
   useEffect(() => {
     const t = window.setInterval(() => setLeft((v) => Math.max(0, v - 1)), 1000)
@@ -34,28 +35,26 @@ export function PayPage() {
   return (
     <section className="page pay-page">
       <NavBar title="支付订单" />
-      <p className="pay-timer">订单剩余支付时间：{mm}:{ss}</p>
+      <p className="pay-timer">
+        订单剩余支付时间：{mm}:{ss}
+      </p>
 
       <div className="card pay-amount-card">
         <OrderNo id={order.id} />
         <span>订单金额</span>
         <strong>{money(order.payable)}</strong>
-        <Link to={`/order/${order.id}`}>查看订单详情 ›</Link>
       </div>
 
       <div className="card pay-methods">
         <button
           type="button"
           className={`pay-method clickable ${channel === 'wechat' ? 'on' : ''}`}
-          onClick={() => {
-            setChannel('wechat')
-          }}
+          onClick={() => setChannel('wechat')}
         >
           <div className="pay-method-left">
             <span className="pay-badge wechat">微</span>
             <div>
               <strong>微信支付</strong>
-              <p>推荐</p>
             </div>
           </div>
           <span className="radio" />
@@ -63,15 +62,12 @@ export function PayPage() {
         <button
           type="button"
           className={`pay-method clickable ${channel === 'alipay' ? 'on' : ''}`}
-          onClick={() => {
-            setChannel('alipay')
-          }}
+          onClick={() => setChannel('alipay')}
         >
           <div className="pay-method-left">
             <span className="pay-badge alipay">支</span>
             <div>
               <strong>支付宝</strong>
-              <p>企业收款通道</p>
             </div>
           </div>
           <span className="radio" />
@@ -84,6 +80,10 @@ export function PayPage() {
           type="button"
           disabled={order.status !== 'pending_pay' || shortfall > 0}
           onClick={() => {
+            if (findUnavailableOrderItems(order.items).length) {
+              toast('菜品已下架或售罄，无法支付')
+              return
+            }
             payOrder(order.id, channel)
             toast('支付成功，等待商家接单')
             navigate(`/order/${order.id}`)

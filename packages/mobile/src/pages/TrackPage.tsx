@@ -21,20 +21,20 @@ export function TrackPage() {
     <section className="page">
       <NavBar title="查看送达" />
       <div className="hero">
-        <p>{order.status === 'delivered' ? '实际送达' : '预计送达'}</p>
+        <p>{order.status === 'delivered' ? '实际送达' : '配送进度'}</p>
         <h2>
           {order.status === 'delivered'
             ? order.eta ?? '已送达'
-            : order.etaRange
-              ? order.etaRange
-              : order.eta ?? '计算中'}
+            : order.rider
+              ? order.rider.location
+              : '等待骑手接单'}
         </h2>
         <span>
           {order.status === 'delivered'
             ? '订单已完成'
             : order.rider
-              ? `骑手位于 ${order.rider.location}`
-              : '等待骑手接单'}
+              ? `骑手 ${order.rider.name}`
+              : '商家出餐后开始配送'}
         </span>
       </div>
       <div className="card">

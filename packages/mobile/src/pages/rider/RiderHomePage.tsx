@@ -1,29 +1,30 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { RIDER_NAME, riderTabOf } from '../../lib/riderStage'
 import { money } from '../../lib/utils'
 import { useApp } from '../../store/AppStore'
 import type { Order } from '../../types'
 
 function isMine(o: Order) {
-  return o.rider?.name === '李骑手'
+  return o.rider?.name === RIDER_NAME
+}
+
+function isActiveStage(stage: ReturnType<typeof riderTabOf>) {
+  return stage === 'heading' || stage === 'arrived' || stage === 'delivering'
 }
 
 export function RiderHomePage() {
   const { orders } = useApp()
 
-  const pool = orders.filter((o) => ['preparing', 'ready'].includes(o.status) && !o.rider).length
-  const mine = orders.filter(
-    (o) => isMine(o) && ['preparing', 'ready', 'picked', 'delivering'].includes(o.status),
-  )
-  const waiting = mine.filter((o) => o.status !== 'delivering').length
-  const delivering = mine.filter((o) => o.status === 'delivering').length
+  const pool = orders.filter((o) => riderTabOf(o) === 'pool').length
+  const heading = orders.filter((o) => riderTabOf(o) === 'heading').length
+  const arrived = orders.filter((o) => riderTabOf(o) === 'arrived').length
+  const delivering = orders.filter((o) => riderTabOf(o) === 'delivering').length
 
   const income = useMemo(() => {
     const mineAll = orders.filter(isMine)
     const done = mineAll.filter((o) => o.status === 'delivered')
-    const doing = mineAll.filter((o) =>
-      ['preparing', 'ready', 'picked', 'delivering'].includes(o.status),
-    )
+    const doing = mineAll.filter((o) => isActiveStage(riderTabOf(o)))
     const earned = done.reduce((s, o) => s + o.deliveryFee, 0)
     const pending = doing.reduce((s, o) => s + o.deliveryFee, 0)
     return {
@@ -68,16 +69,20 @@ export function RiderHomePage() {
         </div>
       </div>
 
-      <div className="role-stats cols-3">
+      <div className="role-stats">
         <Link to="/r/tasks?tab=pool">
           <b>{pool}</b>
-          <span>可接单</span>
+          <span>待接单</span>
         </Link>
-        <Link to="/r/tasks?tab=doing">
-          <b>{waiting}</b>
-          <span>待取/待送</span>
+        <Link to="/r/tasks?tab=heading">
+          <b>{heading}</b>
+          <span>前往门店</span>
         </Link>
-        <Link to="/r/tasks?tab=doing">
+        <Link to="/r/tasks?tab=arrived">
+          <b>{arrived}</b>
+          <span>到店待取</span>
+        </Link>
+        <Link to="/r/tasks?tab=delivering">
           <b>{delivering}</b>
           <span>配送中</span>
         </Link>
@@ -86,7 +91,7 @@ export function RiderHomePage() {
       <div className="card">
         <Link className="entry" to="/r/tasks">
           <span>订单处理</span>
-          <span className="muted">接单 / 取餐 / 送达 ›</span>
+          <span className="muted">接单 / 到店 / 取餐 / 送达 ›</span>
         </Link>
       </div>
     </section>

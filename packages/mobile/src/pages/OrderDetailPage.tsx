@@ -1,9 +1,32 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { DeliveryProofView } from '../components/DeliveryProof'
 import { MoneyRow, NavBar, OrderNo, Tag } from '../components/ui'
-import { canCancel, cancelPreview, money, statusText } from '../lib/utils'
+import {
+  canApplyCancel,
+  canApplyRefund,
+  canCancel,
+  cancelPreview,
+  cancelRuleRows,
+  money,
+  statusText,
+} from '../lib/utils'
 import { useApp } from '../store/AppStore'
+
+function ruleCellClass(value: string) {
+  if (value === '可直接取消' || value === '可申请' || value === '自动退款' || value === '已完成') {
+    return 'ok'
+  }
+  if (value === '不可取消' || value === '不可申请') return 'no'
+  if (value === '审核中') return 'pending'
+  return undefined
+}
+
+function reviewCellClass(value: string) {
+  if (value === '是') return 'review-yes'
+  if (value === '否') return 'review-no'
+  return undefined
+}
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -11,6 +34,7 @@ export function OrderDetailPage() {
   const order = orders.find((o) => o.id === id)
   const navigate = useNavigate()
   const [reason, setReason] = useState('计划有变')
+  const [showCancelRules, setShowCancelRules] = useState(false)
 
   if (!order) {
     return (
@@ -22,18 +46,12 @@ export function OrderDetailPage() {
   }
 
   const preview = cancelPreview(order.status, order.payable)
-  const showEta = !!order.etaRange && !['delivered', 'cancelled', 'rejected', 'refunded'].includes(order.status)
 
   return (
     <section className="page">
       <NavBar title="订单详情" />
       <div className="card">
         <h3 style={{ margin: '0 0 8px' }}>{statusText(order.status)}</h3>
-        {showEta ? (
-          <p className="eta-range-line">
-            预计 <strong>{order.etaRange}</strong> 送达
-          </p>
-        ) : null}
         {order.status === 'delivered' && order.eta ? (
           <p className="muted">实际送达 {order.eta}</p>
         ) : null}
@@ -77,34 +95,36 @@ export function OrderDetailPage() {
           <DeliveryProofView src={order.deliveryProof} caption="骑手送达凭证" />
         </div>
       ) : null}
-      <div className="card">
-        <h4>进度</h4>
-        <ul className="timeline">
-          {order.timeline.map((t) => (
-            <li key={`${t.time}-${t.title}`}>
-              <b>
-                {t.time} {t.title}
-              </b>
-              <span className="muted">{t.desc}</span>
-            </li>
-          ))}
-        </ul>
-        {['ready', 'picked', 'delivering'].includes(order.status) ? (
-          <Link className="btn ghost" to={`/track/${order.id}`} style={{ display: 'inline-block', marginTop: 8 }}>
-            查看送达
-          </Link>
-        ) : null}
-      </div>
       {order.refund ? (
         <div className="card">
           <h4>退款进度</h4>
           <p>
             {order.refund.reason} · 预计退回 {money(order.refund.expected)}
           </p>
-          <Tag tone="orange">{order.refund.status === 'pending' ? '审核中' : order.refund.status}</Tag>
+          <Tag
+            tone={
+              order.refund.status === 'pending'
+                ? 'orange'
+                : order.refund.status === 'rejected'
+                  ? 'red'
+                  : 'green'
+            }
+          >
+            {order.refund.status === 'pending'
+              ? '商家审核中'
+              : order.refund.status === 'rejected'
+                ? '已驳回'
+                : order.refund.status === 'returned'
+                  ? '已退款'
+                  : order.refund.status}
+          </Tag>
         </div>
       ) : null}
       <div className="pad" style={{ display: 'grid', gap: 8 }}>
+        <button className="cancel-rule-entry" type="button" onClick={() => setShowCancelRules(true)}>
+          取消与退款规则
+          <span>了解各阶段如何处理 ›</span>
+        </button>
         {order.status === 'pending_pay' ? (
           <button className="btn block" type="button" onClick={() => navigate(`/pay/${order.id}`)}>
             去支付
@@ -127,19 +147,72 @@ export function OrderDetailPage() {
                 toast(`已取消，预计退回 ${money(preview.expected)}`)
               }}
             >
-              申请取消订单
+              取消订单
             </button>
           </>
         ) : null}
-        {order.status === 'delivered' && !order.refund ? (
-          <button className="btn block" type="button" onClick={() => navigate(`/refund/${order.id}`)}>
-            申请退款
-          </button>
+        {canApplyRefund(order.status) && (!order.refund || order.refund.status === 'rejected') ? (
+          <>
+            <p className="muted">{preview.tip}</p>
+            <button
+              className="btn danger block"
+              type="button"
+              onClick={() => navigate(`/refund/${order.id}`)}
+            >
+              {canApplyCancel(order.status) ? '申请取消' : '申请退款'}
+            </button>
+          </>
+        ) : null}
+        {order.status === 'refunding' ? (
+          <p className="muted">申请审核中，商家处理中；如有异议可联系客服。</p>
+        ) : null}
+        {order.refund?.status === 'rejected' ? (
+          <p className="muted">商家已驳回申请，可再次申请或联系客服处理。</p>
         ) : null}
         <button className="btn ghost block" type="button" onClick={() => navigate(`/service/${order.id}`)}>
           联系客服
         </button>
       </div>
+
+      {showCancelRules ? (
+        <div className="role-sheet" onClick={() => setShowCancelRules(false)}>
+          <div className="role-sheet-card cancel-rule-sheet" onClick={(e) => e.stopPropagation()}>
+            <h3>取消与退款规则</h3>
+            <p className="muted cancel-rule-lead">
+              出餐前可直接取消（已付则自动退款）；出餐后至送达前申请取消即含退款；送达后仅可申请售后退款。需审核的由商家处理，有异议可联系客服。
+            </p>
+            <div className="cancel-rule-table-wrap">
+              <table className="cancel-rule-table">
+                <thead>
+                  <tr>
+                    <th>订单状态</th>
+                    <th>取消订单</th>
+                    <th>申请退款</th>
+                    <th>是否需商家审核</th>
+                    <th>说明</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cancelRuleRows.map((row) => (
+                    <tr key={row.status}>
+                      <td>{row.status}</td>
+                      <td className={ruleCellClass(row.cancel)}>{row.cancel}</td>
+                      <td className={ruleCellClass(row.refund)}>{row.refund}</td>
+                      <td className={reviewCellClass(row.review)}>{row.review}</td>
+                      <td>{row.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="role-actions" style={{ marginTop: 16 }}>
+              <button className="btn block" type="button" onClick={() => setShowCancelRules(false)}>
+                我知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

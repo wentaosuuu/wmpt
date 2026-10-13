@@ -134,9 +134,10 @@ export function MerchantOrdersPage() {
                   <span className="kitchen-item-name">{i.name}</span>
                   <span className="kitchen-item-qty">×{i.qty}</span>
                 </div>
-                {i.spec && i.spec !== '标准份' ? (
+                {i.spec || i.remark ? (
                   <div className="kitchen-item-meta">
-                    <span>{i.spec}</span>
+                    {i.spec ? <em>规格：{i.spec}</em> : null}
+                    {i.remark ? <span>备注：{i.remark}</span> : null}
                   </div>
                 ) : null}
               </li>
@@ -255,7 +256,7 @@ export function MerchantOrdersPage() {
         <div className="role-sheet">
           <div className="role-sheet-card">
             <h3>驳回退款申请？</h3>
-            <p className="muted">驳回后订单恢复为已送达，用户可再次联系客服</p>
+            <p className="muted">驳回后订单恢复原履约状态，用户可再次申请或联系客服</p>
             <div className="role-actions" style={{ marginTop: 12 }}>
               <button className="btn ghost" type="button" onClick={() => setRefundRejectId(null)}>
                 取消

@@ -165,6 +165,9 @@
   color: #fff;
   font-size: 14px;
   line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
 }
 
 .btn:hover {
@@ -724,4 +727,214 @@
 
 .store-row-branch td {
   background: #fff;
+}
+
+.tip-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border-radius: 50%;
+  border: 1px solid #c9cdd4;
+  background: #fff;
+  color: #86909c;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.tip-icon:hover,
+.tip-icon:focus-visible {
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+/* 向下弹出，避免被 .table-wrap 顶部 overflow 裁切 */
+.tip-icon::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: max-content;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(29, 33, 41, 0.92);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: normal;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tip-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  z-index: 41;
+  border: 5px solid transparent;
+  border-bottom-color: rgba(29, 33, 41, 0.92);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.15s ease;
+}
+
+.tip-icon:hover::after,
+.tip-icon:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tip-icon:hover::before,
+.tip-icon:focus-visible::before {
+  opacity: 1;
+}
+
+.data-table thead th {
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+
+.data-table thead th:has(.tip-icon:hover),
+.data-table thead th:has(.tip-icon:focus-visible) {
+  z-index: 5;
+}
+
+.stock-neg {
+  color: #f53f3f;
+  font-variant-numeric: tabular-nums;
+}
+
+.door-photo-thumb {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #e5e6eb;
+  background: #f7f8fa;
+}
+
+.door-photo-thumb.empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #c9cdd4;
+}
+
+.door-photo-preview {
+  display: block;
+  width: 160px;
+  height: 160px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e5e6eb;
+  background: #f7f8fa;
+}
+
+.door-photo-preview.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #86909c;
+  font-size: 13px;
+}
+
+.door-photo-edit {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
+.door-photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.door-photo-upload {
+  cursor: pointer;
+}
+
+.cuisine-icon-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: inline-grid;
+  place-items: center;
+  background: #f7f8fa;
+  border: 1px solid #e5e6eb;
+  font-size: 20px;
+  vertical-align: middle;
+}
+
+.dish-photo-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: inline-grid;
+  place-items: center;
+  background: #f7f8fa;
+  border: 1px solid #e5e6eb;
+  font-size: 11px;
+  color: #c9cdd4;
+  vertical-align: middle;
+}
+
+.dish-photo-thumb.empty {
+  width: 40px;
+  height: 40px;
+}
+
+.dish-photo-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: #f7f8fa;
+  border: 1px solid #e5e6eb;
+  flex: 0 0 auto;
+  color: #86909c;
+  font-size: 13px;
+}
+
+.dish-photo-preview.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cuisine-icon-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: #f7f8fa;
+  border: 1px solid #e5e6eb;
+  font-size: 32px;
+  flex: 0 0 auto;
 }

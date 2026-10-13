@@ -1,27 +1,36 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { categoryChips, sortOptions, stores, type StoreSortKey } from '../mock'
+import { CatIcon } from '../components/CatIcon'
+import { StoreCover } from '../components/StoreCover'
+import { useCuisineCategories } from '../hooks/useCuisineCategories'
+import { sortOptions, stores, type StoreSortKey } from '../mock'
 import { sortStores } from '../lib/storeFilter'
 import { money } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
 export function HomePage() {
-  const { user, orders, addresses } = useApp()
+  const { user, orders, storeConfigRev } = useApp()
+  const { chips } = useCuisineCategories()
   const [cuisine, setCuisine] = useState('全部')
   const [sort, setSort] = useState<StoreSortKey>('default')
-  const addr = addresses.find((a) => a.isDefault) ?? addresses[0]
+
+  useEffect(() => {
+    if (chips.length && !chips.some((c) => c.id === cuisine)) {
+      setCuisine(chips[0]?.id ?? '全部')
+    }
+  }, [chips, cuisine])
   const pending = orders.filter((o) =>
     ['pending_pay', 'pending_accept', 'preparing', 'ready', 'picked', 'delivering'].includes(o.status),
   ).length
 
   const list = useMemo(() => {
     const filtered = stores.filter((s) => {
-      if (!s.takeoutEnabled || !s.deliverable) return false
+      if (!s.takeoutEnabled || !s.frontListed || !s.deliverable) return false
       if (cuisine !== '全部' && s.cuisine !== cuisine) return false
       return true
     })
     return sortStores(filtered, sort)
-  }, [cuisine, sort])
+  }, [cuisine, sort, storeConfigRev])
 
   return (
     <section className="page home-page">
@@ -31,9 +40,7 @@ export function HomePage() {
         </header>
         <div className="home-banner">
           <div>
-            <p className="banner-kicker">园区外卖专场</p>
             <h2>乐享好食光</h2>
-            <p>附近门店配送 · 微信 / 支付宝支付</p>
           </div>
           <div className="banner-visual" aria-hidden>
             🍱
@@ -46,7 +53,6 @@ export function HomePage() {
           <div className="user-avatar">{user?.name?.slice(0, 1) ?? '用'}</div>
           <div>
             <strong>{user?.name}</strong>
-            <p>{addr ? `${addr.district} · ${addr.street}` : user?.campus}</p>
           </div>
         </div>
         <div className="user-balance">
@@ -70,22 +76,26 @@ export function HomePage() {
       </div>
 
       <div className="cat-quick">
-        {categoryChips.map((c) => (
+        {chips.map((c) => (
           <button
             key={c.id}
             type="button"
             className={`cat-quick-item ${cuisine === c.id ? 'on' : ''}`}
             onClick={() => setCuisine(c.id)}
           >
-            <span className="cat-quick-icon">{c.icon}</span>
+            <span className="cat-quick-icon">
+              <CatIcon icon={c.icon} />
+            </span>
             <em>{c.label}</em>
           </button>
         ))}
       </div>
 
       <div className="section-hd home-feed-hd">
-        <h3>{cuisine === '全部' ? '为你推荐' : `${cuisine}好店`}</h3>
-        <span className="feed-count">{list.length} 家</span>
+        <h3>附近商家</h3>
+        <Link to="/shops" className="feed-more">
+          查看更多
+        </Link>
       </div>
 
       <div className="sort-bar">
@@ -104,22 +114,21 @@ export function HomePage() {
       <div className="home-feed">
         {list.map((s) => (
           <Link key={s.id} to={`/store/${s.id}`} className="feed-card">
-            <div className="feed-cover">{s.cover}</div>
+            <StoreCover
+              className="feed-cover"
+              doorPhoto={s.doorPhoto}
+              cover={s.cover}
+              alt={s.name}
+            />
             <div className="feed-body">
               <div className="feed-title">
                 <h4>{s.name}</h4>
                 <em>{Math.round(s.distanceKm * 1000)}m</em>
               </div>
-              <p>
-                ★ {s.rating} · 月售 {s.monthlySales} · 约 {s.etaMin} 分钟
-              </p>
+              <p>月售 {s.monthlySales}</p>
               <div className="feed-tags">
-                <span>{s.cuisine}</span>
                 <span>起送 {money(s.minOrder)}</span>
                 <span>配送 {money(s.deliveryFee)}</span>
-                {s.tags.slice(0, 2).map((t) => (
-                  <span key={t}>{t}</span>
-                ))}
               </div>
             </div>
           </Link>

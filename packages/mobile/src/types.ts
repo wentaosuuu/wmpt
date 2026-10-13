@@ -20,9 +20,16 @@ export type Store = {
   phone: string
   hours: string
   notice: string
+  /** 对应后台 takeout：是否开通外卖 */
   takeoutEnabled: boolean
+  /** 对应后台 frontListed：是否上架到移动端 */
+  frontListed: boolean
+  /** 当前地址是否可配送 */
   deliverable: boolean
+  /** emoji 或文字占位封面 */
   cover: string
+  /** 门牌照片（优先于 cover 展示） */
+  doorPhoto?: string
 }
 
 export type DishSpec = {
@@ -40,10 +47,13 @@ export type Dish = {
   soldOut: boolean
   stock: number
   description: string
+  /** 来自后台「规格管理」关联到该菜品的规格 */
   specs: DishSpec[]
   utensils: string
-  remarks: string[]
+  /** emoji 占位封面 */
   cover?: string
+  /** 后台上传的菜品图片（优先于 cover） */
+  photo?: string
 }
 
 export type CartItem = {
@@ -110,11 +120,15 @@ export type Refund = {
   createdAt: string
 }
 
+export type TicketType = 'consult' | 'complaint'
+
 export type Ticket = {
   id: string
+  type: TicketType
   orderId?: string
   content: string
-  status: 'open' | 'processing' | 'done'
+  /** open=待处理，done=已完结 */
+  status: 'open' | 'done'
   reply: string
   createdAt: string
 }
@@ -139,13 +153,13 @@ export type Order = {
   /** 商家出餐后生成的三位取餐号，供骑手到店快速取餐 */
   pickupNo?: string
   rider?: { name: string; phone: string; location: string }
-  /** 预计送达时刻（兼容旧字段） */
+  /** 实际送达时刻（骑手确认送达后写入） */
   eta?: string
-  /** 预计送达时间区间，如 12:00-12:15 */
-  etaRange?: string
   /** 骑手确认送达时上传的照片证据（data URL 或图片地址） */
   deliveryProof?: string
   refund?: Refund
+  /** 申请退款/取消前的订单状态，商家驳回时用于恢复 */
+  statusBeforeRefund?: OrderStatus
   cancelReason?: string
 }
 
@@ -155,4 +169,8 @@ export type User = {
   name: string
   phone: string
   campus: string
+  /** 后台商家入驻审核通过后开通商家端 */
+  merchantEnabled: boolean
+  /** 后台骑手注册并启用后开通骑手端 */
+  riderEnabled: boolean
 }

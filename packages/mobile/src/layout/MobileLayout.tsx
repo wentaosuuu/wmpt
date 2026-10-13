@@ -99,7 +99,7 @@ function tabsFor(role: AppRole) {
 }
 
 function Shell({ withTab }: { withTab: boolean }) {
-  const { toasts, role, setRole } = useApp()
+  const { toasts, role, setRole, canUseRole, toast } = useApp()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -116,8 +116,18 @@ function Shell({ withTab }: { withTab: boolean }) {
     ) {
       next = 'consumer'
     }
-    if (next && next !== role) setRole(next, true)
-  }, [pathname, role, setRole])
+    if (!next || next === role) return
+    if (!canUseRole(next)) {
+      toast(
+        next === 'merchant'
+          ? '需后台商家入驻审核通过后才能进入商家端'
+          : '需后台完成骑手注册并启用后才能进入骑手端',
+      )
+      navigate('/', { replace: true })
+      return
+    }
+    setRole(next, true)
+  }, [pathname, role, setRole, canUseRole, toast, navigate])
 
   const tabs = tabsFor(role)
 

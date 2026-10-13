@@ -146,6 +146,23 @@
   font-style: normal;
 }
 
+.role-menu i.lock {
+  color: #c9cdd4;
+  font-size: 11px;
+}
+
+.role-menu button.locked {
+  opacity: 0.55;
+}
+
+.role-menu button.locked:hover {
+  background: transparent;
+}
+
+.role-menu button:disabled {
+  cursor: not-allowed;
+}
+
 .mobile-notch {
   width: 96px;
   height: 22px;

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "CS001",
+    "type": "consult",
+    "user": "张晓楠",
+    "content": "骑手在西门岗亭，如何交接？",
+    "status": "done",
+    "handler": "客服-小梁",
+    "result": "已告知用户下楼取餐，订单正常送达",
+    "createdAt": "2026-09-15 11:50"
+  },
+  {
+    "id": "TS001",
+    "type": "complaint",
+    "user": "周敏",
+    "content": "汤洒漏，申请全额退款",
+    "status": "open",
+    "handler": "-",
+    "result": "",
+    "createdAt": "2026-09-15 12:10"
+  },
+  {
+    "id": "TS002",
+    "type": "complaint",
+    "user": "陈凯",
+    "content": "餐品与描述不符",
+    "status": "open",
+    "handler": "-",
+    "result": "",
+    "createdAt": "2026-09-15 12:25"
+  },
+  {
+    "id": "CS002",
+    "type": "consult",
+    "user": "李婷",
+    "content": "发票什么时候开具？",
+    "status": "done",
+    "handler": "客服-阿强",
+    "result": "已说明电子发票将在订单完成后 24 小时内发送至注册手机号",
+    "createdAt": "2026-09-14 16:20"
+  }
+]

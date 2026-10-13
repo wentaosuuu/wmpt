@@ -19,7 +19,7 @@ export function StaffPage() {
   const [storeFilter, setStoreFilter] = useState('all')
 
   const stores = useMemo(
-    () => merchants.filter((m) => m.type === 'branch' && m.status === 'approved'),
+    () => merchants.filter((m) => m.status === 'approved'),
     [merchants],
   )
 

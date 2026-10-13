@@ -46,14 +46,7 @@ export const menus: MenuNode[] = [
     ],
   },
   { key: '/riders', label: '骑手管理', to: '/riders' },
-  {
-    key: 'aftersale',
-    label: '售后管理',
-    children: [
-      { key: '/aftersale/refund', to: '/aftersale/refund', label: '退款审核' },
-      { key: '/aftersale/tickets', to: '/aftersale/tickets', label: '客服工单' },
-    ],
-  },
+  { key: '/aftersale/tickets', label: '客服工单', to: '/aftersale/tickets' },
   { key: '/finance/trades', label: '交易流水', to: '/finance/trades' },
   {
     key: 'system',
@@ -62,6 +55,7 @@ export const menus: MenuNode[] = [
       { key: '/system/users', to: '/system/users', label: '用户管理' },
       { key: '/system/depts', to: '/system/depts', label: '部门管理' },
       { key: '/system/roles', to: '/system/roles', label: '角色管理' },
+      { key: '/system/cuisines', to: '/system/cuisines', label: '品类管理' },
     ],
   },
 ]

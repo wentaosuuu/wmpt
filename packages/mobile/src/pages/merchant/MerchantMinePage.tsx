@@ -52,10 +52,6 @@ export function MerchantMinePage() {
           <span>营业状态</span>
           <span className="muted">营业中</span>
         </div>
-        <div className="entry">
-          <span>出餐时效</span>
-          <span className="muted">约 15-20 分钟</span>
-        </div>
       </div>
     </section>
   )

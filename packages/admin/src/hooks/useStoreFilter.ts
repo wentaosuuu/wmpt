@@ -5,7 +5,7 @@ import { useAdmin } from '../store/AdminStore'
 export function useApprovedStores() {
   const { merchants } = useAdmin()
   return useMemo(
-    () => merchants.filter((m) => m.type === 'branch' && m.status === 'approved'),
+    () => merchants.filter((m) => m.status === 'approved'),
     [merchants],
   )
 }

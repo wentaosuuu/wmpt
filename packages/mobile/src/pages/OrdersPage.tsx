@@ -67,9 +67,6 @@ export function OrdersPage() {
             </Tag>
           </div>
           <OrderNo id={o.id} />
-          {o.etaRange && !['delivered', 'cancelled', 'rejected', 'refunded'].includes(o.status) ? (
-            <p className="eta-range-line compact">预计 {o.etaRange} 送达</p>
-          ) : null}
           <p className="order-items">{o.items.map((i) => `${i.name} x${i.qty}`).join('、')}</p>
           <div className="order-card-ft">
             <span>{o.createdAt}</span>

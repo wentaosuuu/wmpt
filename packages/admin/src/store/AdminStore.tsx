@@ -1,9 +1,18 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   accounts,
   cancelRules as seedCancelRules,
   categories as seedCategories,
   coverages as seedCover,
+  cuisineCategories as seedCuisines,
   depts as seedDepts,
   merchantChangeLogs as seedChangeLogs,
   merchants as seedMerchants,
@@ -19,11 +28,17 @@ import {
   tickets as seedTickets,
   tradeRecords as seedTrades,
 } from '../mock'
+import { fetchCuisineCategories, persistCuisineCategories } from '../lib/cuisineApi'
+import { dishDescMapFromProducts, persistDishDescriptions } from '../lib/dishDescApi'
+import { dishPhotoMapFromProducts, persistDishPhotos } from '../lib/dishPhotoApi'
+import { minOrderMapFromMerchants, persistStoreMinOrders } from '../lib/minOrderApi'
+import { fetchTickets, persistTickets } from '../lib/ticketApi'
 import type {
   AdminOrder,
   AdminUser,
   CancelRule,
   Coverage,
+  CuisineCategory,
   DishCategory,
   DishSpec,
   Merchant,
@@ -60,6 +75,7 @@ type Ctx = {
   depts: SysDept[]
   roles: SysRole[]
   sysUsers: SysUser[]
+  cuisineCategories: CuisineCategory[]
   notify: (text: string) => void
   login: (username: string, password: string) => boolean
   logout: () => void
@@ -92,6 +108,9 @@ type Ctx = {
   saveRole: (r: SysRole) => void
   updateSysUser: (id: string, patch: Partial<SysUser>) => void
   saveSysUser: (u: SysUser) => void
+  saveCuisineCategory: (c: CuisineCategory) => void
+  updateCuisineCategory: (id: string, patch: Partial<CuisineCategory>) => void
+  removeCuisineCategory: (id: string) => void
 }
 
 const MERCHANT_FIELD_LABELS: Partial<Record<keyof Merchant, string>> = {
@@ -104,19 +123,24 @@ const MERCHANT_FIELD_LABELS: Partial<Record<keyof Merchant, string>> = {
   expireAt: '资质到期日',
   hours: '营业时间',
   deposit: '保证金',
+  minOrder: '起送费',
+  deliveryFee: '配送费',
+  cuisine: '经营品类',
   orderPackingFee: '订单包装费',
   takeout: '外卖能力',
   frontListed: '移动端上架',
   qualStatus: '资质状态',
+  doorPhoto: '门牌照片',
 }
 
 function formatMerchantField(key: keyof Merchant, value: Merchant[keyof Merchant]): string {
-  if (key === 'deposit' || key === 'orderPackingFee') {
+  if (key === 'deposit' || key === 'minOrder' || key === 'deliveryFee' || key === 'orderPackingFee') {
     const n = Number(value) || 0
     return `¥${n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
   if (key === 'takeout') return value ? '已开通' : '未开通'
   if (key === 'frontListed') return value ? '已上架' : '未上架'
+  if (key === 'doorPhoto') return value ? '已上传' : '未上传'
   if (key === 'qualStatus') {
     const map: Record<string, string> = {
       valid: '有效',
@@ -197,6 +221,50 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [depts, setDepts] = useState(seedDepts)
   const [roles, setRoles] = useState(seedRoles)
   const [sysUsers, setSysUsers] = useState(seedUsers)
+  const [cuisineCategories, setCuisineCategories] = useState(seedCuisines)
+
+  useEffect(() => {
+    let alive = true
+    fetchCuisineCategories().then((list) => {
+      if (alive) setCuisineCategories(list)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const syncCuisines = useCallback((next: CuisineCategory[]) => {
+    setCuisineCategories(next)
+    void persistCuisineCategories(next)
+  }, [])
+
+  const syncDishPhotos = useCallback((list: Product[]) => {
+    void persistDishPhotos(dishPhotoMapFromProducts(list))
+  }, [])
+
+  const syncDishDescriptions = useCallback((list: Product[]) => {
+    void persistDishDescriptions(dishDescMapFromProducts(list))
+  }, [])
+
+  useEffect(() => {
+    syncDishPhotos(seedProducts)
+    syncDishDescriptions(seedProducts)
+  }, [syncDishPhotos, syncDishDescriptions])
+
+  useEffect(() => {
+    let alive = true
+    const pull = () => {
+      fetchTickets().then((list) => {
+        if (alive && list.length) setTickets(list)
+      })
+    }
+    pull()
+    const timer = window.setInterval(pull, 5000)
+    return () => {
+      alive = false
+      window.clearInterval(timer)
+    }
+  }, [])
 
   const notify = useCallback((text: string) => {
     setToast(text)
@@ -225,26 +293,38 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     [passwordMap, user],
   )
 
+  const syncMinOrders = useCallback((list: Merchant[]) => {
+    void persistStoreMinOrders(minOrderMapFromMerchants(list))
+  }, [])
+
   const updateMerchant = useCallback(
     (id: string, patch: Partial<Merchant>) => {
       const target = merchants.find((m) => m.id === id)
       if (!target) return
       const next = { ...target, ...patch }
       const logs = buildMerchantChangeLogs(target, next, user?.name || '系统')
-      setMerchants((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)))
+      setMerchants((prev) => {
+        const list = prev.map((m) => (m.id === id ? { ...m, ...patch } : m))
+        if (patch.minOrder !== undefined) syncMinOrders(list)
+        return list
+      })
       if (logs.length) setMerchantChangeLogs((cls) => [...logs, ...cls])
     },
-    [merchants, user],
+    [merchants, syncMinOrders, user],
   )
 
   const saveMerchant = useCallback(
     (m: Merchant) => {
       const target = merchants.find((x) => x.id === m.id)
       const logs = target ? buildMerchantChangeLogs(target, m, user?.name || '系统') : []
-      setMerchants((prev) => upsert(prev, m))
+      setMerchants((prev) => {
+        const list = upsert(prev, m)
+        syncMinOrders(list)
+        return list
+      })
       if (logs.length) setMerchantChangeLogs((cls) => [...logs, ...cls])
     },
-    [merchants, user],
+    [merchants, syncMinOrders, user],
   )
 
   const submitApplication = useCallback((app: Omit<StoreApplication, 'id' | 'status' | 'createdAt'>) => {
@@ -279,35 +359,47 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const auditApplication = useCallback((id: string, pass: boolean, remark: string) => {
     setApplications((prev) => {
       const target = prev.find((a) => a.id === id)
-      if (!target) return prev
+      if (!target || target.status !== 'pending') return prev
       if (pass) {
-        const storeId = `s${Date.now()}`
-        const hq = merchants.find(
-          (m) => m.type === 'hq' && (m.name === target.parentMerchant || m.id === target.parentMerchant),
-        )
-        setMerchants((ms) => [
-          ...ms,
-          {
-            id: storeId,
-            name: target.name,
-            type: 'branch',
-            parentId: hq?.id,
-            parentName: hq?.name ?? target.parentMerchant,
-            takeout: false,
-            frontListed: false,
-            address: target.address,
-            pickup: target.addressDetail || target.address,
-            contact: target.contact,
-            phone: target.phone,
-            hours: target.hours,
-            qualStatus: 'valid',
-            license: target.license,
-            expireAt: '2027-09-15',
-            deposit: 0,
-            orderPackingFee: 1,
-            status: 'approved',
-          },
-        ])
+        const isHq = target.applyType === 'hq'
+        const storeId = `${isHq ? 'm' : 's'}${Date.now()}`
+        const hq = !isHq
+          ? merchants.find(
+              (m) =>
+                m.type === 'hq' &&
+                (m.name === target.parentMerchant || m.id === target.parentMerchant),
+            )
+          : undefined
+        setMerchants((ms) => {
+          const list = [
+            ...ms,
+            {
+              id: storeId,
+              name: target.name,
+              type: isHq ? ('hq' as const) : ('branch' as const),
+              parentId: isHq ? undefined : hq?.id,
+              parentName: isHq ? undefined : hq?.name ?? target.parentMerchant,
+              takeout: false,
+              frontListed: false,
+              address: target.address,
+              pickup: target.addressDetail || target.address,
+              contact: target.contact,
+              phone: target.phone,
+              hours: target.hours,
+              qualStatus: 'valid' as const,
+              license: target.license,
+              expireAt: '2027-09-15',
+              minOrder: isHq ? 0 : 15,
+              deliveryFee: isHq ? 0 : 3,
+              cuisine: target.cuisine || '快餐',
+              deposit: isHq ? 20000 : 0,
+              orderPackingFee: isHq ? 0 : 1,
+              status: 'approved' as const,
+            },
+          ]
+          syncMinOrders(list)
+          return list
+        })
         setCoverages((cs) => [
           ...cs,
           { storeId, storeName: target.name, radiusKm: 3, enabled: false },
@@ -319,14 +411,30 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           : a,
       )
     })
-  }, [merchants])
+  }, [merchants, syncMinOrders])
 
-  const updateProduct = useCallback((id: string, patch: Partial<Product>) => {
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)))
-  }, [])
-  const saveProduct = useCallback((p: Product) => {
-    setProducts((prev) => upsert(prev, p))
-  }, [])
+  const updateProduct = useCallback(
+    (id: string, patch: Partial<Product>) => {
+      setProducts((prev) => {
+        const list = prev.map((p) => (p.id === id ? { ...p, ...patch } : p))
+        if (patch.photo !== undefined) syncDishPhotos(list)
+        if (patch.description !== undefined) syncDishDescriptions(list)
+        return list
+      })
+    },
+    [syncDishPhotos, syncDishDescriptions],
+  )
+  const saveProduct = useCallback(
+    (p: Product) => {
+      setProducts((prev) => {
+        const list = upsert(prev, { ...p, description: p.description.trim() })
+        syncDishPhotos(list)
+        syncDishDescriptions(list)
+        return list
+      })
+    },
+    [syncDishPhotos, syncDishDescriptions],
+  )
 
   const saveCategory = useCallback((c: DishCategory) => {
     setCategories((prev) => upsert(prev, c))
@@ -374,7 +482,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch } : o)))
   }, [])
   const updateTicket = useCallback((id: string, patch: Partial<Ticket>) => {
-    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    setTickets((prev) => {
+      const list = prev.map((t) => (t.id === id ? { ...t, ...patch } : t))
+      void persistTickets(list)
+      return list
+    })
   }, [])
   const updateCoverage = useCallback((storeId: string, patch: Partial<Coverage>) => {
     setCoverages((prev) => prev.map((c) => (c.storeId === storeId ? { ...c, ...patch } : c)))
@@ -404,6 +516,32 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, [])
   const saveSysUser = useCallback((u: SysUser) => setSysUsers((prev) => upsert(prev, u)), [])
 
+  const saveCuisineCategory = useCallback(
+    (c: CuisineCategory) => {
+      syncCuisines(upsert(cuisineCategories, c))
+    },
+    [cuisineCategories, syncCuisines],
+  )
+
+  const updateCuisineCategory = useCallback(
+    (id: string, patch: Partial<CuisineCategory>) => {
+      const target = cuisineCategories.find((x) => x.id === id)
+      if (!target) return
+      if (target.isAll && patch.name !== undefined && patch.name !== target.name) return
+      syncCuisines(cuisineCategories.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+    },
+    [cuisineCategories, syncCuisines],
+  )
+
+  const removeCuisineCategory = useCallback(
+    (id: string) => {
+      const target = cuisineCategories.find((x) => x.id === id)
+      if (!target || target.isAll) return
+      syncCuisines(cuisineCategories.filter((x) => x.id !== id))
+    },
+    [cuisineCategories, syncCuisines],
+  )
+
   const value = useMemo(
     () => ({
       user,
@@ -425,6 +563,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       depts,
       roles,
       sysUsers,
+      cuisineCategories,
       notify,
       login,
       logout,
@@ -457,6 +596,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       saveRole,
       updateSysUser,
       saveSysUser,
+      saveCuisineCategory,
+      updateCuisineCategory,
+      removeCuisineCategory,
     }),
     [
       user,
@@ -478,6 +620,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       depts,
       roles,
       sysUsers,
+      cuisineCategories,
       notify,
       login,
       logout,
@@ -510,6 +653,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       saveRole,
       updateSysUser,
       saveSysUser,
+      saveCuisineCategory,
+      updateCuisineCategory,
+      removeCuisineCategory,
     ],
   )
 
