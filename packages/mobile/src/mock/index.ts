@@ -854,7 +854,7 @@ export const defaultAddresses: Address[] = [
 export const seedOrders: Order[] = [
   // —— 待支付（消费者·待付款）——
   {
-    id: 'WMPT20261013001',
+    id: 'WMPT20261013000001',
     storeId: 's1',
     storeName: '南门食堂 · 外卖档口',
     items: [
@@ -882,7 +882,7 @@ export const seedOrders: Order[] = [
   },
   // —— 待商家接单 ——
   {
-    id: 'WMPT20261013002',
+    id: 'WMPT20261013000002',
     storeId: 's1',
     storeName: '南门食堂 · 外卖档口',
     items: [
@@ -907,6 +907,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610131150000001',
     status: 'pending_accept',
     createdAt: '2026-10-13 11:50',
     payDeadline: '2026-10-13 12:05',
@@ -920,7 +921,7 @@ export const seedOrders: Order[] = [
   },
   // —— 商家备餐中 · 骑手待接单池 ——
   {
-    id: 'WMPT20261013003',
+    id: 'WMPT20261013000003',
     storeId: 's2',
     storeName: '桂香米粉馆',
     items: [
@@ -936,6 +937,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[1],
     payChannel: 'alipay',
+    tradeNo: 'TF202610131140000002',
     status: 'preparing',
     createdAt: '2026-10-13 11:40',
     payDeadline: '2026-10-13 11:55',
@@ -952,7 +954,7 @@ export const seedOrders: Order[] = [
   },
   // —— 商家备餐中 · 骑手前往门店 ——
   {
-    id: 'WMPT20261013004',
+    id: 'WMPT20261013000004',
     storeId: 's1',
     storeName: '南门食堂 · 外卖档口',
     items: [
@@ -968,6 +970,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610131135000003',
     status: 'preparing',
     createdAt: '2026-10-13 11:35',
     payDeadline: '2026-10-13 11:50',
@@ -986,7 +989,7 @@ export const seedOrders: Order[] = [
   },
   // —— 商家已出餐 · 骑手待接单池 ——
   {
-    id: 'WMPT20261013005',
+    id: 'WMPT20261013000005',
     storeId: 's1',
     storeName: '南门食堂 · 外卖档口',
     items: [
@@ -1011,6 +1014,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610131120000004',
     status: 'ready',
     createdAt: '2026-10-13 11:20',
     payDeadline: '2026-10-13 11:35',
@@ -1029,7 +1033,7 @@ export const seedOrders: Order[] = [
   },
   // —— 商家已出餐 · 骑手到店待取 ——
   {
-    id: 'WMPT20261013006',
+    id: 'WMPT20261013000006',
     storeId: 's2',
     storeName: '桂香米粉馆',
     items: [
@@ -1045,6 +1049,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610131110000005',
     status: 'ready',
     createdAt: '2026-10-13 11:10',
     payDeadline: '2026-10-13 11:25',
@@ -1066,7 +1071,7 @@ export const seedOrders: Order[] = [
   },
   // —— 骑手已取餐（商家已交餐，待开始配送）——
   {
-    id: 'WMPT20261013007',
+    id: 'WMPT20261013000007',
     storeId: 's4',
     storeName: '北区烧烤铺',
     items: [
@@ -1082,6 +1087,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[1],
     payChannel: 'alipay',
+    tradeNo: 'TF202610131055000006',
     status: 'picked',
     createdAt: '2026-10-13 10:55',
     payDeadline: '2026-10-13 11:10',
@@ -1104,7 +1110,7 @@ export const seedOrders: Order[] = [
   },
   // —— 配送中 ——
   {
-    id: 'WMPT20261013008',
+    id: 'WMPT20261013000008',
     storeId: 's2',
     storeName: '桂香米粉馆',
     items: [
@@ -1120,6 +1126,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610131040000007',
     status: 'delivering',
     createdAt: '2026-10-13 10:40',
     payDeadline: '2026-10-13 10:55',
@@ -1133,7 +1140,7 @@ export const seedOrders: Order[] = [
     rider: { ...RIDER, location: '配送途中 · 科研楼地下通道' },
     timeline: [
       { time: '10:40', title: '支付成功', desc: '微信支付 ¥25.00' },
-      { time: '10:41', title: '商家已接单', desc: '预计备餐 18 分钟' },
+      { time: '10:41', title: '商家已接单', desc: '开始备餐' },
       { time: '10:55', title: '出餐完成', desc: '取餐号 188' },
       { time: '10:58', title: '骑手已到店', desc: '请凭取餐号取餐' },
       { time: '11:00', title: '商家已交餐', desc: `已交给骑手 ${RIDER_NAME}` },
@@ -1142,7 +1149,7 @@ export const seedOrders: Order[] = [
   },
   // —— 已送达 ——
   {
-    id: 'WMPT20261012011',
+    id: 'WMPT20261013000011',
     storeId: 's1',
     storeName: '南门食堂 · 外卖档口',
     items: [
@@ -1167,9 +1174,10 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610131210000008',
     status: 'delivered',
-    createdAt: '2026-10-12 12:10',
-    payDeadline: '2026-10-12 12:25',
+    createdAt: '2026-10-13 12:10',
+    payDeadline: '2026-10-13 12:25',
     remark: '',
     packingFee: 1,
     deliveryFee: 3,
@@ -1188,9 +1196,82 @@ export const seedOrders: Order[] = [
       { time: '12:48', title: '确认送达', desc: '已上传送达照片，订单完成' },
     ],
   },
+  // —— 今日已送达（骑手收入演示）——
+  {
+    id: 'WMPT20261013000012',
+    storeId: 's5',
+    storeName: '一点点奶茶',
+    items: [
+      {
+        dishId: 'd9',
+        name: '波霸奶茶',
+        spec: '中杯',
+        remark: '',
+        price: 13,
+        packingFee: 0,
+        qty: 2,
+      },
+    ],
+    address: defaultAddresses[0],
+    payChannel: 'alipay',
+    tradeNo: 'TF202610131820000009',
+    status: 'delivered',
+    createdAt: '2026-10-13 18:20',
+    payDeadline: '2026-10-13 18:35',
+    remark: '',
+    packingFee: 1,
+    deliveryFee: 2,
+    extraFee: 0,
+    dishAmount: 26,
+    payable: 29,
+    pickupNo: '812',
+    eta: '18:42',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 812'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '18:20', title: '支付成功', desc: '支付宝支付 ¥29.00' },
+      { time: '18:42', title: '确认送达', desc: '已上传送达照片，订单完成' },
+    ],
+  },
+  {
+    id: 'WMPT20261010000013',
+    storeId: 's2',
+    storeName: '桂香米粉馆',
+    items: [
+      {
+        dishId: 'd4',
+        name: '老友粉',
+        spec: '中辣',
+        remark: '',
+        price: 18,
+        packingFee: 0,
+        qty: 1,
+      },
+    ],
+    address: defaultAddresses[1],
+    payChannel: 'wechat',
+    tradeNo: 'TF202610101205000010',
+    status: 'delivered',
+    createdAt: '2026-10-10 12:05',
+    payDeadline: '2026-10-10 12:20',
+    remark: '',
+    packingFee: 2,
+    deliveryFee: 4,
+    extraFee: 0,
+    dishAmount: 18,
+    payable: 24,
+    pickupNo: '610',
+    eta: '12:30',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 610'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '12:05', title: '支付成功', desc: '微信支付 ¥24.00' },
+      { time: '12:30', title: '确认送达', desc: '订单完成' },
+    ],
+  },
   // —— 商家拒单 ——
   {
-    id: 'WMPT20261012008',
+    id: 'WMPT20261012000008',
     storeId: 's5',
     storeName: '一点点奶茶',
     items: [
@@ -1206,6 +1287,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'alipay',
+    tradeNo: 'TF202610121520000011',
     status: 'rejected',
     createdAt: '2026-10-12 15:20',
     payDeadline: '2026-10-12 15:35',
@@ -1223,7 +1305,7 @@ export const seedOrders: Order[] = [
   },
   // —— 备餐中用户直接取消（骑手侧·已取消）——
   {
-    id: 'WMPT20261012006',
+    id: 'WMPT20261012000006',
     storeId: 's3',
     storeName: '轻食沙拉工坊 · 科研楼店',
     items: [
@@ -1239,6 +1321,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610121110000012',
     status: 'cancelled',
     createdAt: '2026-10-12 11:10',
     payDeadline: '2026-10-12 11:25',
@@ -1259,7 +1342,7 @@ export const seedOrders: Order[] = [
   },
   // —— 配送中申请取消（待商家审核）——
   {
-    id: 'WMPT20261013009',
+    id: 'WMPT20261013000009',
     storeId: 's1',
     storeName: '南门食堂 · 外卖档口',
     items: [
@@ -1275,6 +1358,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[1],
     payChannel: 'wechat',
+    tradeNo: 'TF202610131020000013',
     status: 'refunding',
     statusBeforeRefund: 'delivering',
     createdAt: '2026-10-13 10:20',
@@ -1305,7 +1389,7 @@ export const seedOrders: Order[] = [
   },
   // —— 已送达后申请售后退款（待商家审核）——
   {
-    id: 'WMPT20261012018',
+    id: 'WMPT20261012000018',
     storeId: 's1',
     storeName: '南门食堂 · 外卖档口',
     items: [
@@ -1321,6 +1405,7 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[1],
     payChannel: 'alipay',
+    tradeNo: 'TF202610121802000014',
     status: 'refunding',
     statusBeforeRefund: 'delivered',
     createdAt: '2026-10-12 18:02',
@@ -1339,6 +1424,7 @@ export const seedOrders: Order[] = [
       id: 'R20261012018',
       amount: 48,
       reason: '少餐漏餐',
+      remark: '少了一份米饭，照片已在客服说明',
       status: 'pending',
       expected: 48,
       createdAt: '2026-10-12 19:10',
@@ -1353,7 +1439,7 @@ export const seedOrders: Order[] = [
   },
   // —— 已退款 ——
   {
-    id: 'WMPT20261011007',
+    id: 'WMPT20261011000007',
     storeId: 's5',
     storeName: '一点点奶茶',
     items: [
@@ -1369,6 +1455,8 @@ export const seedOrders: Order[] = [
     ],
     address: defaultAddresses[0],
     payChannel: 'wechat',
+    tradeNo: 'TF202610111600000015',
+    refundTradeNo: 'TF202610111600000016',
     status: 'refunded',
     createdAt: '2026-10-11 16:00',
     payDeadline: '2026-10-11 16:15',
@@ -1397,6 +1485,224 @@ export const seedOrders: Order[] = [
       { time: '17:20', title: '商家同意退款', desc: '全额退款 ¥17.00，原路退回' },
     ],
   },
+  // —— 账单演示 · 2026-09 ——
+  {
+    id: 'WMPT20260928000001',
+    storeId: 's1',
+    storeName: '南门食堂 · 外卖档口',
+    items: [
+      {
+        dishId: 'd1',
+        name: '香菇滑鸡套餐',
+        spec: '标准份',
+        remark: '',
+        price: 22,
+        packingFee: 0,
+        qty: 1,
+      },
+    ],
+    address: defaultAddresses[0],
+    payChannel: 'wechat',
+    tradeNo: 'TF202609281218000017',
+    status: 'delivered',
+    createdAt: '2026-09-28 12:18',
+    payDeadline: '2026-09-28 12:33',
+    remark: '',
+    packingFee: 1,
+    deliveryFee: 3,
+    extraFee: 0,
+    dishAmount: 22,
+    payable: 26,
+    pickupNo: '701',
+    eta: '12:45',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 701'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '12:18', title: '支付成功', desc: '微信支付 ¥26.00' },
+      { time: '12:45', title: '确认送达', desc: '订单完成' },
+    ],
+  },
+  {
+    id: 'WMPT20260925000002',
+    storeId: 's2',
+    storeName: '桂香米粉馆',
+    items: [
+      {
+        dishId: 'd4',
+        name: '老友粉',
+        spec: '中辣',
+        remark: '',
+        price: 18,
+        packingFee: 0,
+        qty: 2,
+      },
+    ],
+    address: defaultAddresses[0],
+    payChannel: 'alipay',
+    tradeNo: 'TF202609251840000018',
+    status: 'delivered',
+    createdAt: '2026-09-25 18:40',
+    payDeadline: '2026-09-25 18:55',
+    remark: '',
+    packingFee: 2,
+    deliveryFee: 4,
+    extraFee: 0,
+    dishAmount: 36,
+    payable: 42,
+    pickupNo: '702',
+    eta: '19:08',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 702'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '18:40', title: '支付成功', desc: '支付宝支付 ¥42.00' },
+      { time: '19:08', title: '确认送达', desc: '订单完成' },
+    ],
+  },
+  {
+    id: 'WMPT20260918000003',
+    storeId: 's5',
+    storeName: '一点点奶茶',
+    items: [
+      {
+        dishId: 'd9',
+        name: '波霸奶茶',
+        spec: '中杯',
+        remark: '少冰少糖',
+        price: 13,
+        packingFee: 0,
+        qty: 2,
+      },
+    ],
+    address: defaultAddresses[1],
+    payChannel: 'wechat',
+    tradeNo: 'TF202609181522000019',
+    status: 'delivered',
+    createdAt: '2026-09-18 15:22',
+    payDeadline: '2026-09-18 15:37',
+    remark: '少冰少糖',
+    packingFee: 1,
+    deliveryFee: 2,
+    extraFee: 0,
+    dishAmount: 26,
+    payable: 29,
+    pickupNo: '703',
+    eta: '15:48',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 703'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '15:22', title: '支付成功', desc: '微信支付 ¥29.00' },
+      { time: '15:48', title: '确认送达', desc: '订单完成' },
+    ],
+  },
+  {
+    id: 'WMPT20260910000004',
+    storeId: 's3',
+    storeName: '轻食沙拉工坊 · 科研楼店',
+    items: [
+      {
+        dishId: 'd6',
+        name: '鸡胸谷物碗',
+        spec: '油醋汁',
+        remark: '',
+        price: 28,
+        packingFee: 0,
+        qty: 1,
+      },
+    ],
+    address: defaultAddresses[0],
+    payChannel: 'wechat',
+    tradeNo: 'TF202609101105000020',
+    status: 'delivered',
+    createdAt: '2026-09-10 11:05',
+    payDeadline: '2026-09-10 11:20',
+    remark: '',
+    packingFee: 1,
+    deliveryFee: 6,
+    extraFee: 0,
+    dishAmount: 28,
+    payable: 35,
+    pickupNo: '704',
+    eta: '11:36',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 704'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '11:05', title: '支付成功', desc: '微信支付 ¥35.00' },
+      { time: '11:36', title: '确认送达', desc: '订单完成' },
+    ],
+  },
+  // —— 账单演示 · 2026-08 ——
+  {
+    id: 'WMPT20260822000001',
+    storeId: 's1',
+    storeName: '南门食堂 · 外卖档口',
+    items: [
+      {
+        dishId: 'd2',
+        name: '番茄炒蛋盖饭',
+        spec: '加大份',
+        remark: '',
+        price: 20,
+        packingFee: 0,
+        qty: 1,
+      },
+    ],
+    address: defaultAddresses[0],
+    payChannel: 'alipay',
+    tradeNo: 'TF202608221208000021',
+    status: 'delivered',
+    createdAt: '2026-08-22 12:08',
+    payDeadline: '2026-08-22 12:23',
+    remark: '',
+    packingFee: 1,
+    deliveryFee: 3,
+    extraFee: 0,
+    dishAmount: 20,
+    payable: 24,
+    pickupNo: '801',
+    eta: '12:35',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 801'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '12:08', title: '支付成功', desc: '支付宝支付 ¥24.00' },
+      { time: '12:35', title: '确认送达', desc: '订单完成' },
+    ],
+  },
+  {
+    id: 'WMPT20260808000002',
+    storeId: 's4',
+    storeName: '北区烧烤铺',
+    items: [
+      {
+        dishId: 'd8',
+        name: '烤翅双拼',
+        spec: '微辣',
+        remark: '',
+        price: 32,
+        packingFee: 0,
+        qty: 1,
+      },
+    ],
+    address: defaultAddresses[1],
+    payChannel: 'wechat',
+    tradeNo: 'TF202608081915000022',
+    status: 'delivered',
+    createdAt: '2026-08-08 19:15',
+    payDeadline: '2026-08-08 19:30',
+    remark: '',
+    packingFee: 2,
+    deliveryFee: 8,
+    extraFee: 0,
+    dishAmount: 32,
+    payable: 42,
+    pickupNo: '802',
+    eta: '19:48',
+    deliveryProof: sampleDeliveryProof('送达凭证 · 802'),
+    rider: { ...RIDER, location: '已送达' },
+    timeline: [
+      { time: '19:15', title: '支付成功', desc: '微信支付 ¥42.00' },
+      { time: '19:48', title: '确认送达', desc: '订单完成' },
+    ],
+  },
 ]
 
 export type StoreSortKey = 'default' | 'distance' | 'sales' | 'deliveryFee'
@@ -1405,7 +1711,7 @@ export const sortOptions: { id: StoreSortKey; label: string }[] = [
   { id: 'default', label: '综合排序' },
   { id: 'distance', label: '距离优先' },
   { id: 'sales', label: '销量优先' },
-  { id: 'deliveryFee', label: '配送费最低' },
+  { id: 'deliveryFee', label: '预估配送费最低' },
 ]
 
 export const distances = [

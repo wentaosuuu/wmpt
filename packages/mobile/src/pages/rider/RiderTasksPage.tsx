@@ -101,7 +101,7 @@ export function RiderTasksPage() {
         return (
           <div key={o.id} className="card role-order">
             <div className="row">
-              <OrderNo id={o.id} short />
+              <OrderNo id={o.id} />
               <Tag
                 tone={
                   tab === 'cancelled'

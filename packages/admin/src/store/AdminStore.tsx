@@ -80,6 +80,8 @@ type Ctx = {
   login: (username: string, password: string) => boolean
   logout: () => void
   changePassword: (oldPwd: string, nextPwd: string) => boolean
+  /** 重置为 12 位随机密码并返回明文，便于复制发给用户 */
+  resetSysPassword: (phone: string) => string
   updateMerchant: (id: string, patch: Partial<Merchant>) => void
   saveMerchant: (m: Merchant) => void
   submitApplication: (app: Omit<StoreApplication, 'id' | 'status' | 'createdAt'>) => void
@@ -124,7 +126,7 @@ const MERCHANT_FIELD_LABELS: Partial<Record<keyof Merchant, string>> = {
   hours: '营业时间',
   deposit: '保证金',
   minOrder: '起送费',
-  deliveryFee: '配送费',
+  deliveryFee: '预估配送费',
   cuisine: '经营品类',
   orderPackingFee: '订单包装费',
   takeout: '外卖能力',
@@ -292,6 +294,15 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     },
     [passwordMap, user],
   )
+
+  const resetSysPassword = useCallback((phone: string) => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+    const bytes = new Uint8Array(12)
+    crypto.getRandomValues(bytes)
+    const nextPwd = Array.from(bytes, (n) => chars[n % chars.length]).join('')
+    setPasswordMap((prev) => ({ ...prev, [phone]: nextPwd }))
+    return nextPwd
+  }, [])
 
   const syncMinOrders = useCallback((list: Merchant[]) => {
     void persistStoreMinOrders(minOrderMapFromMerchants(list))
@@ -568,6 +579,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       changePassword,
+      resetSysPassword,
       updateMerchant,
       saveMerchant,
       submitApplication,
@@ -625,6 +637,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       changePassword,
+      resetSysPassword,
       updateMerchant,
       saveMerchant,
       submitApplication,
@@ -681,5 +694,4 @@ export const statusLabel: Record<string, string> = {
   cancelled: '已取消',
   refund_review: '退款待审',
   refunded: '已退款',
-  dispatch_fail: '配送发送失败',
 }

@@ -244,9 +244,4 @@ export const cancelRuleRows = [
   },
 ] as const
 
-export function nextOrderId() {
-  const n = Math.floor(Math.random() * 900 + 100)
-  const d = new Date()
-  const pad = (x: number) => String(x).padStart(2, '0')
-  return `WMPT${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${n}`
-}
+export { nextOrderId, nextTradeNo, ORDER_ID_TIP, TRADE_NO_TIP } from '@wmpt/shared'

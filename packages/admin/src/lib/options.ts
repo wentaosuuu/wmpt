@@ -16,7 +16,7 @@ export function joinHours(start: string, end: string) {
 }
 
 export function channelLabel(channel: string) {
-  return channel === 'wechat' ? '微信支付' : channel === 'alipay' ? '支付宝' : channel
+  return channel === 'wechat' ? '微信' : channel === 'alipay' ? '支付宝' : channel
 }
 
 export function tradeTypeLabel(type: string) {
@@ -24,5 +24,5 @@ export function tradeTypeLabel(type: string) {
 }
 
 export function tradeStatusLabel(status: string) {
-  return status === 'success' ? '成功' : status === 'failed' ? '失败' : '处理中'
+  return status === 'success' ? '成功' : '失败'
 }

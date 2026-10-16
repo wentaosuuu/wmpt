@@ -4,19 +4,17 @@ import { CatIcon } from '../components/CatIcon'
 import { StoreCover } from '../components/StoreCover'
 import { Tag } from '../components/ui'
 import { useCuisineCategories } from '../hooks/useCuisineCategories'
-import { distances, sortOptions, stores, type StoreSortKey } from '../mock'
+import { sortOptions, stores, type StoreSortKey } from '../mock'
 import { sortStores } from '../lib/storeFilter'
 import { money } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
 export function ShopsPage() {
-  const { addresses, storeConfigRev } = useApp()
+  const { storeConfigRev } = useApp()
   const { chips } = useCuisineCategories()
   const [keyword, setKeyword] = useState('')
   const [cuisine, setCuisine] = useState('全部')
-  const [distance, setDistance] = useState(99)
   const [sort, setSort] = useState<StoreSortKey>('distance')
-  const addr = addresses.find((a) => a.isDefault) ?? addresses[0]
 
   useEffect(() => {
     if (chips.length && !chips.some((c) => c.id === cuisine)) {
@@ -28,12 +26,11 @@ export function ShopsPage() {
     const filtered = stores.filter((s) => {
       if (!s.takeoutEnabled || !s.frontListed) return false
       if (cuisine !== '全部' && s.cuisine !== cuisine) return false
-      if (s.distanceKm > distance) return false
       if (keyword && !s.name.includes(keyword) && !s.cuisine.includes(keyword)) return false
       return true
     })
     return sortStores(filtered, sort)
-  }, [keyword, cuisine, distance, sort, storeConfigRev])
+  }, [keyword, cuisine, sort, storeConfigRev])
 
   return (
     <section className="page shops-page">
@@ -48,10 +45,6 @@ export function ShopsPage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
-        </div>
-        <div className="shops-loc">
-          <span>📍</span>
-          <em>{addr?.street ?? '选择地址'}</em>
         </div>
       </div>
 
@@ -72,15 +65,6 @@ export function ShopsPage() {
       </div>
 
       <div className="shops-filters">
-        <label>
-          <select value={distance} onChange={(e) => setDistance(Number(e.target.value))}>
-            {distances.map((d) => (
-              <option key={d.label} value={d.value}>
-                {d.label === '不限' ? '距离不限' : d.label}
-              </option>
-            ))}
-          </select>
-        </label>
         <span className="shops-filter-hint">共 {list.length} 家</span>
       </div>
 
@@ -119,7 +103,7 @@ export function ShopsPage() {
               </div>
               <div className="shop-fees">
                 <span>起送 {money(s.minOrder)}</span>
-                <span>配送 {money(s.deliveryFee)}</span>
+                <span>预估配送费 {money(s.deliveryFee)}</span>
               </div>
             </div>
           </Link>

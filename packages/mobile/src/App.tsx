@@ -10,7 +10,6 @@ import { CheckoutPage } from './pages/CheckoutPage'
 import { DishPage } from './pages/DishPage'
 import { HomePage } from './pages/HomePage'
 import { MerchantHomePage } from './pages/merchant/MerchantHomePage'
-import { MerchantMinePage } from './pages/merchant/MerchantMinePage'
 import { MerchantOrdersPage } from './pages/merchant/MerchantOrdersPage'
 import { MinePage } from './pages/MinePage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
@@ -19,7 +18,7 @@ import { PayPage } from './pages/PayPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { RefundPage } from './pages/RefundPage'
 import { RiderHomePage } from './pages/rider/RiderHomePage'
-import { RiderMinePage } from './pages/rider/RiderMinePage'
+import { RiderIncomePage } from './pages/rider/RiderIncomePage'
 import { RiderTasksPage } from './pages/rider/RiderTasksPage'
 import { ServicePage } from './pages/ServicePage'
 import { ShopsPage } from './pages/ShopsPage'
@@ -41,10 +40,10 @@ function App() {
             <Route path="cart" element={<CartPage />} />
             <Route path="m" element={<MerchantHomePage />} />
             <Route path="m/orders" element={<MerchantOrdersPage />} />
-            <Route path="m/mine" element={<MerchantMinePage />} />
+            <Route path="m/mine" element={<Navigate to="/m" replace />} />
             <Route path="r" element={<RiderHomePage />} />
             <Route path="r/tasks" element={<RiderTasksPage />} />
-            <Route path="r/mine" element={<RiderMinePage />} />
+            <Route path="r/mine" element={<Navigate to="/r" replace />} />
           </Route>
           <Route element={<SubpageLayout />}>
             <Route path="store/:id" element={<StorePage />} />
@@ -63,6 +62,7 @@ function App() {
             <Route path="service" element={<ServicePage />} />
             <Route path="service/:id" element={<ServicePage />} />
             <Route path="privacy" element={<PrivacyPage />} />
+            <Route path="r/income" element={<RiderIncomePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

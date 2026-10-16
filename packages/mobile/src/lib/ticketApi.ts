@@ -4,11 +4,13 @@ export type SharedTicket = {
   id: string
   type: TicketType
   user: string
+  phone: string
   content: string
   status: 'open' | 'done'
   handler: string
   result: string
   createdAt: string
+  repliedAt: string
   orderId?: string
 }
 

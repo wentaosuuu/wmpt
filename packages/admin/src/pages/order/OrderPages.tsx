@@ -3,6 +3,7 @@ import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '.
 import { useOptionalStoreFilter } from '../../hooks/useStoreFilter'
 import { statusLabel, useAdmin } from '../../store/AdminStore'
 import type { AdminOrder, AdminOrderStatus } from '../../types'
+import { OrderLines } from './OrderManagePage'
 
 function mealAmount(o: AdminOrder) {
   return Math.max(0, o.amount - o.packingFee - o.deliveryFee)
@@ -25,7 +26,10 @@ export function CancelAuditPage() {
           matchStore(o.storeId) &&
           (o.id.includes(kw) ||
             o.storeName.includes(kw) ||
-            o.items.includes(kw) ||
+            o.items.some(
+              (item) =>
+                item.name.includes(kw) || item.spec.includes(kw) || (item.remark ?? '').includes(kw),
+            ) ||
             (o.cancelReason ?? '').includes(kw) ||
             (o.note ?? '').includes(kw) ||
             stageOf(o).includes(kw)),
@@ -91,7 +95,9 @@ export function CancelAuditPage() {
                   <td>
                     <StatusTag tone="warning">{stageOf(o)}</StatusTag>
                   </td>
-                  <td>{o.items}</td>
+                  <td>
+                    <OrderLines items={o.items} />
+                  </td>
                   <td>{o.cancelReason}</td>
                   <td>¥{o.amount.toFixed(2)}</td>
                   <td className="ops">
@@ -201,16 +207,13 @@ function CancelOrderDetail({ order }: { order: AdminOrder }) {
         { label: '审核状态', value: statusLabel[order.status] },
         { label: '用户', value: `${order.user} ${order.phone}` },
         { label: '收货地址', value: order.address },
-        { label: '商品', value: order.items },
+        { label: '商品', value: <OrderLines items={order.items} /> },
         { label: '餐品金额', value: `¥${mealAmount(order).toFixed(2)}` },
         { label: '包装费', value: `¥${order.packingFee.toFixed(2)}` },
         { label: '配送费', value: `¥${order.deliveryFee.toFixed(2)}` },
         { label: '实付金额', value: `¥${order.amount.toFixed(2)}` },
         { label: '下单时间', value: order.createdAt },
-        {
-          label: '备餐时长',
-          value: order.prepMinutes ? `${order.prepMinutes} 分钟` : '-',
-        },
+        { label: '取餐号', value: order.pickupNo || '-' },
         { label: '骑手', value: order.rider || '-' },
         { label: '取消原因', value: order.cancelReason || '-' },
         { label: '申请说明', value: order.note },

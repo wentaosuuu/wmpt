@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { AdminLayout } from './layout/AdminLayout'
 import { TicketsPage } from './pages/aftersale/AftersalePages'
 import { DashboardPage } from './pages/DashboardPage'
-import { CoveragePage, ExceptionPage } from './pages/delivery/DeliveryPages'
 import { TradeFlowPage } from './pages/finance/FinancePages'
 import { LoginPage } from './pages/LoginPage'
 import { StoreApplyPage, StoreAuditPage, StoresPage } from './pages/merchant/MerchantPages'
@@ -67,15 +66,15 @@ function App() {
               <Route path="fulfill/prep" element={<Navigate to="/orders" replace />} />
               <Route path="fulfill/handover" element={<Navigate to="/orders" replace />} />
 
-              <Route path="delivery/coverage" element={<CoveragePage />} />
-              <Route path="delivery/exception" element={<ExceptionPage />} />
-              <Route path="delivery/fail" element={<Navigate to="/delivery/exception" replace />} />
+              <Route path="delivery/coverage" element={<Navigate to="/merchants/stores" replace />} />
+              <Route path="delivery/exception" element={<Navigate to="/merchants/stores" replace />} />
+              <Route path="delivery/fail" element={<Navigate to="/merchants/stores" replace />} />
 
               <Route path="riders" element={<RidersPage />} />
               <Route path="riders/apply" element={<Navigate to="/riders" replace />} />
               <Route path="riders/audit" element={<Navigate to="/riders" replace />} />
-              <Route path="delivery/dispatch" element={<Navigate to="/delivery/exception" replace />} />
-              <Route path="delivery/track" element={<Navigate to="/delivery/exception" replace />} />
+              <Route path="delivery/dispatch" element={<Navigate to="/merchants/stores" replace />} />
+              <Route path="delivery/track" element={<Navigate to="/merchants/stores" replace />} />
 
               <Route path="aftersale/tickets" element={<TicketsPage />} />
               <Route path="aftersale/refund" element={<Navigate to="/aftersale/tickets" replace />} />

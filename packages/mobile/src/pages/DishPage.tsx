@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DishCover } from '../components/DishCover'
-import { NavBar, Tag } from '../components/ui'
+import { NavBar } from '../components/ui'
 import { dishById, money, storeById } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
@@ -41,7 +41,6 @@ export function DishPage() {
             <p className="muted">{dish.description}</p>
             <div className="dish-detail-price-row">
               <span className="price">{money(dish.price + extra)}</span>
-              <Tag tone="gray">订单包装费 {money(store.orderPackingFee)}</Tag>
             </div>
           </div>
         </div>

@@ -5,7 +5,8 @@ import type { DishCategory, DishSpec, Product } from '../../types'
 
 function useStoreFilter() {
   const { merchants } = useAdmin()
-  const stores = merchants.filter((m) => m.status === 'approved')
+  /** 菜品/分类/规格挂在分店；总店不维护菜单 */
+  const stores = merchants.filter((m) => m.status === 'approved' && m.type === 'branch')
   const [storeId, setStoreId] = useState(() => stores[0]?.id ?? '')
   const effectiveId = storeId && stores.some((s) => s.id === storeId) ? storeId : stores[0]?.id ?? ''
   return {
@@ -160,7 +161,6 @@ export function DishesPage() {
                 <th>菜品</th>
                 <th>分类</th>
                 <th>价格</th>
-                <th>规格</th>
                 <th>上架状态</th>
                 <th>操作</th>
               </tr>
@@ -186,7 +186,6 @@ export function DishesPage() {
                   <td>{p.name}</td>
                   <td>{p.category}</td>
                   <td>¥{p.price.toFixed(2)}</td>
-                  <td>{p.spec}</td>
                   <td>
                     <StatusTag tone={p.onShelf ? 'success' : 'default'}>
                       {p.onShelf ? '已上架' : '已下架'}
@@ -218,7 +217,7 @@ export function DishesPage() {
               ))}
               {!list.length ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={7}>
                     <div className="empty-block">该门店暂无菜品</div>
                   </td>
                 </tr>
@@ -272,8 +271,12 @@ export function DishesPage() {
               type="button"
               onClick={() => {
                 if (!form) return
-                if (!form.name || !form.categoryId || !form.specIds.length) {
-                  notify('请填写菜品名称，并选择分类与规格')
+                if (!form.storeName.trim() || !form.name.trim() || !form.categoryId || !(form.price > 0)) {
+                  notify('请填写所属门店、菜品名称、分类和价格')
+                  return
+                }
+                if (!form.specIds.length) {
+                  notify('请选择规格')
                   return
                 }
                 if (!form.description.trim()) {
@@ -298,13 +301,13 @@ export function DishesPage() {
       >
         {form ? (
           <div className="form-grid">
-            <Field label="所属门店">
+            <Field label="所属门店" required>
               <input value={form.storeName} disabled />
             </Field>
-            <Field label="菜品名称">
+            <Field label="菜品名称" required>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
-            <Field label="分类">
+            <Field label="分类" required>
               <select
                 value={form.categoryId}
                 onChange={(e) => {
@@ -319,21 +322,13 @@ export function DishesPage() {
                 ))}
               </select>
             </Field>
-            <Field label="价格（元）">
+            <Field label="价格（元）" required>
               <input
                 type="number"
                 min={0}
                 step="0.1"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) || 0 })}
-              />
-            </Field>
-            <Field label="初始库存">
-              <input
-                type="number"
-                step={1}
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
               />
             </Field>
             <div className="form-field" style={{ gridColumn: '1 / -1' }}>
@@ -443,10 +438,21 @@ export function CategoriesPage() {
     `${storeId}|${kw}`,
   )
 
+  function canDisableCategory(categoryId: string) {
+    return !products.some((p) => p.categoryId === categoryId && p.onShelf)
+  }
+
   function batchEnable(enabled: boolean) {
     if (!selected.length) {
       notify('请先勾选分类')
       return
+    }
+    if (!enabled) {
+      const blocked = selected.filter((id) => !canDisableCategory(id))
+      if (blocked.length) {
+        notify('所选分类中有关联菜品仍在上架，无法停用')
+        return
+      }
     }
     selected.forEach((id) => updateCategory(id, { enabled }))
     notify(enabled ? `已批量启用 ${selected.length} 个分类` : `已批量停用 ${selected.length} 个分类`)
@@ -515,7 +521,17 @@ export function CategoriesPage() {
                 <th>排序</th>
                 <th>状态</th>
                 <th>关联菜品数</th>
-                <th>操作</th>
+                <th>
+                  操作
+                  <i
+                    className="tip-icon"
+                    tabIndex={0}
+                    data-tip="当菜品分类有关联的菜品处于上架状态时，不允许停用该分类。"
+                    aria-label="操作说明"
+                  >
+                    ?
+                  </i>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -544,7 +560,13 @@ export function CategoriesPage() {
                     <button
                       className="link-btn"
                       type="button"
-                      onClick={() => updateCategory(c.id, { enabled: !c.enabled })}
+                      onClick={() => {
+                        if (c.enabled && !canDisableCategory(c.id)) {
+                          notify('该分类有关联菜品仍在上架，无法停用')
+                          return
+                        }
+                        updateCategory(c.id, { enabled: !c.enabled })
+                      }}
                     >
                       {c.enabled ? '停用' : '启用'}
                     </button>
@@ -732,7 +754,17 @@ export function SpecsPage() {
                 <th>加价</th>
                 <th>状态</th>
                 <th>关联菜品数</th>
-                <th>操作</th>
+                <th>
+                  操作
+                  <i
+                    className="tip-icon"
+                    tabIndex={0}
+                    data-tip="规格的停用/启用不受关联菜品是否上架影响。"
+                    aria-label="操作说明"
+                  >
+                    ?
+                  </i>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -867,12 +899,10 @@ export function SpecsPage() {
 
 export function StockPage() {
   const { products, updateProduct, notify } = useAdmin()
-  const { stores, storeId, setStoreId, store } = useStoreFilter()
+  const { stores, storeId, setStoreId } = useStoreFilter()
   const [kw, setKw] = useState('')
   const [current, setCurrent] = useState<Product | null>(null)
-  const [stock, setStock] = useState(0)
-  const [batchStock, setBatchStock] = useState('50')
-  const [mode, setMode] = useState<'edit' | 'soldout' | 'batch' | null>(null)
+  const [mode, setMode] = useState<'soldout' | null>(null)
 
   const storeProducts = products.filter((p) => p.storeId === storeId)
   const list = storeProducts.filter((p) => !kw || p.name.includes(kw))
@@ -880,21 +910,8 @@ export function StockPage() {
   return (
     <>
       <PageHeader
-        title="库存售罄"
-        desc="库存可为负数；是否禁止消费者下单只看「售罄」标记，与库存数字无关。"
-        extra={
-          <button
-            className="btn"
-            type="button"
-            disabled={!storeProducts.length}
-            onClick={() => {
-              setBatchStock('50')
-              setMode('batch')
-            }}
-          >
-            一键设置库存
-          </button>
-        }
+        title="售罄管理"
+        desc="标记「售罄」后消费者不可下单；恢复「可售」后即可下单。"
       />
       <Panel>
         <Toolbar>
@@ -906,17 +923,6 @@ export function StockPage() {
             ))}
           </select>
           <input placeholder="搜索菜品" value={kw} onChange={(e) => setKw(e.target.value)} />
-          <button
-            className="btn ghost"
-            type="button"
-            disabled={!storeProducts.length}
-            onClick={() => {
-              setBatchStock('50')
-              setMode('batch')
-            }}
-          >
-            一键设置库存
-          </button>
         </Toolbar>
         <div className="table-wrap">
           <table className="data-table">
@@ -925,22 +931,11 @@ export function StockPage() {
                 <th>菜品</th>
                 <th>规格</th>
                 <th>
-                  库存
-                  <i
-                    className="tip-icon"
-                    tabIndex={0}
-                    data-tip="库存允许为负数，仅作账面数量参考，不会单独禁止下单。"
-                    aria-label="库存说明"
-                  >
-                    ?
-                  </i>
-                </th>
-                <th>
                   售卖状态
                   <i
                     className="tip-icon"
                     tabIndex={0}
-                    data-tip="标记「售罄」后，用户端不可下单；恢复「可售」后即可下单。与库存是否为负无关。"
+                    data-tip="标记「售罄」后，用户端不可下单；恢复「可售」后即可下单。"
                     aria-label="售卖状态说明"
                   >
                     ?
@@ -954,24 +949,12 @@ export function StockPage() {
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>{p.spec}</td>
-                  <td className={p.stock < 0 ? 'stock-neg' : undefined}>{p.stock}</td>
                   <td>
                     <StatusTag tone={p.soldOut ? 'danger' : 'success'}>
                       {p.soldOut ? '售罄' : '可售'}
                     </StatusTag>
                   </td>
                   <td className="ops">
-                    <button
-                      className="link-btn"
-                      type="button"
-                      onClick={() => {
-                        setCurrent(p)
-                        setStock(p.stock)
-                        setMode('edit')
-                      }}
-                    >
-                      改库存
-                    </button>
                     <button
                       className="link-btn"
                       type="button"
@@ -987,7 +970,7 @@ export function StockPage() {
               ))}
               {!list.length ? (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={4}>
                     <div className="empty-block">该门店暂无菜品</div>
                   </td>
                 </tr>
@@ -996,50 +979,6 @@ export function StockPage() {
           </table>
         </div>
       </Panel>
-
-      <Modal
-        open={mode === 'edit' && !!current}
-        title="修改库存"
-        onClose={() => setMode(null)}
-        footer={
-          <>
-            <button className="btn ghost" type="button" onClick={() => setMode(null)}>
-              取消
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                if (!current) return
-                if (!Number.isFinite(stock)) {
-                  notify('请输入有效的库存数量')
-                  return
-                }
-                updateProduct(current.id, { stock: Math.floor(stock) })
-                notify('库存已更新（不影响售罄状态）')
-                setMode(null)
-              }}
-            >
-              保存
-            </button>
-          </>
-        }
-      >
-        <Field label="菜品">
-          <input value={current?.name ?? ''} disabled />
-        </Field>
-        <Field label="库存数量">
-          <input
-            type="number"
-            step={1}
-            value={stock}
-            onChange={(e) => setStock(Number(e.target.value))}
-          />
-        </Field>
-        <p style={{ margin: '8px 0 0', fontSize: 13, color: '#86909c' }}>
-          允许负数。修改库存不会自动改售罄状态；禁止用户下单请用「标记售罄」。
-        </p>
-      </Modal>
 
       <Modal
         open={mode === 'soldout' && !!current}
@@ -1057,11 +996,7 @@ export function StockPage() {
                 if (!current) return
                 const soldOut = !current.soldOut
                 updateProduct(current.id, { soldOut })
-                notify(
-                  soldOut
-                    ? '已标记售罄：用户端不可下单（库存数字不变）'
-                    : '已恢复可售：用户端可下单',
-                )
+                notify(soldOut ? '已标记售罄：用户端不可下单' : '已恢复可售：用户端可下单')
                 setMode(null)
               }}
             >
@@ -1072,58 +1007,8 @@ export function StockPage() {
       >
         <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
           {current?.soldOut
-            ? `确认将「${current?.name}」恢复可售？恢复后消费者可下单，当前库存 ${current?.stock} 不变。`
-            : `确认将「${current?.name}」标记为售罄？标记后消费者不可下单，当前库存 ${current?.stock} 不变。`}
-        </p>
-      </Modal>
-
-      <Modal
-        open={mode === 'batch'}
-        title="一键设置全部菜品库存"
-        onClose={() => setMode(null)}
-        footer={
-          <>
-            <button className="btn ghost" type="button" onClick={() => setMode(null)}>
-              取消
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                const n = Math.floor(Number(batchStock))
-                if (!Number.isFinite(n)) {
-                  notify('请输入有效的库存数量')
-                  return
-                }
-                storeProducts.forEach((p) => updateProduct(p.id, { stock: n }))
-                notify(
-                  `已将「${store?.name ?? '当前门店'}」${storeProducts.length} 道菜品库存设为 ${n}（售罄状态不变）`,
-                )
-                setMode(null)
-              }}
-            >
-              确认设置
-            </button>
-          </>
-        }
-      >
-        <DescList
-          items={[
-            { label: '门店', value: store?.name },
-            { label: '菜品数', value: String(storeProducts.length) },
-          ]}
-        />
-        <Field label="统一库存数量">
-          <input
-            type="number"
-            step={1}
-            value={batchStock}
-            onChange={(e) => setBatchStock(e.target.value)}
-            placeholder="例如 50，可为负数"
-          />
-        </Field>
-        <p style={{ margin: '0 0 4px', fontSize: 13, color: '#86909c' }}>
-          仅批量改库存数字，不会改各菜品的售罄 / 可售状态。
+            ? `确认将「${current?.name}」恢复可售？恢复后消费者可下单。`
+            : `确认将「${current?.name}」标记为售罄？标记后消费者不可下单。`}
         </p>
       </Modal>
     </>

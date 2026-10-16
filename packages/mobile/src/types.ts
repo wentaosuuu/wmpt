@@ -115,6 +115,8 @@ export type Refund = {
   id: string
   amount: number
   reason: string
+  /** 用户补充说明，选填 */
+  remark?: string
   status: 'pending' | 'approved' | 'rejected' | 'returned'
   expected: number
   createdAt: string
@@ -134,12 +136,17 @@ export type Ticket = {
 }
 
 export type Order = {
+  /** 订单号：WMPT + yyyyMMdd + 6 位当日序号 */
   id: string
   storeId: string
   storeName: string
   items: OrderItem[]
   address: Address
   payChannel?: PayChannel
+  /** 支付流水号：TF + yyyyMMddHHmmss + 4 位序号 */
+  tradeNo?: string
+  /** 退款流水号，原路退回成功后写入 */
+  refundTradeNo?: string
   status: OrderStatus
   createdAt: string
   payDeadline: string

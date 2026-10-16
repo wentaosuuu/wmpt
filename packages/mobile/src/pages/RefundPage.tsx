@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MoneyRow, NavBar } from '../components/ui'
-import { canApplyCancel, canApplyRefund, money, statusText } from '../lib/utils'
+import { canApplyCancel, canApplyRefund, money } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
 const cancelReasons = ['计划有变', '点错了', '等待过久', '不想要了']
-const refundReasons = ['菜品质量问题', '少餐漏餐', '送达超时', '不想要了']
+const refundReasons = ['菜品质量问题', '少餐漏餐', '送达超时', '不想要了', '其他']
 
 export function RefundPage() {
   const { id = '' } = useParams()
@@ -15,6 +15,7 @@ export function RefundPage() {
   const isCancel = order ? canApplyCancel(order.status) : false
   const reasons = isCancel ? cancelReasons : refundReasons
   const [reason, setReason] = useState(reasons[0])
+  const [note, setNote] = useState('')
 
   if (!order) {
     return (
@@ -32,12 +33,6 @@ export function RefundPage() {
     <section className="page pad">
       <NavBar title={title} />
       <div className="card">
-        <p>
-          当前状态：{statusText(order.status)}
-          {isCancel
-            ? ' · 取消含退款：商家同意后停止履约并全额退回'
-            : ' · 售后赔付：履约已完成，仅退款不取消'}
-        </p>
         <p>全额退款明细</p>
         {order.items.map((i) => (
           <div key={i.dishId} className="row">
@@ -51,11 +46,6 @@ export function RefundPage() {
         <MoneyRow label="配送费" value={money(order.deliveryFee)} />
         {order.extraFee > 0 ? <MoneyRow label="附加费" value={money(order.extraFee)} /> : null}
         <MoneyRow label="全额退款金额" value={money(order.payable)} strong />
-        <p className="muted">
-          {isCancel
-            ? '出餐后取消需商家审核。同意后停止配送/取餐并原路退款；驳回后可再申请或联系客服。'
-            : '仅支持全额退款。商家同意后按实付原路退回；驳回后可再申请或联系客服。'}
-        </p>
       </div>
       <div className="field">
         <label>{isCancel ? '取消原因' : '退款原因'}</label>
@@ -65,12 +55,23 @@ export function RefundPage() {
           ))}
         </select>
       </div>
+      <div className="field">
+        <label>备注</label>
+        <textarea
+          className="remark-input"
+          rows={3}
+          maxLength={80}
+          placeholder="选填，补充说明方便商家处理"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </div>
       <button
         className="btn block"
         type="button"
         disabled={!canSubmit}
         onClick={() => {
-          applyRefund(order.id, reason)
+          applyRefund(order.id, reason, note)
           toast('已提交，等待商家审核')
           navigate(`/order/${order.id}`)
         }}

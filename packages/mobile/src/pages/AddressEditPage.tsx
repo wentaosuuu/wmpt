@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AddressCascadeField } from '../components/AddressCascade'
+import { MapPickField } from '../components/MapPickField'
 import { NavBar } from '../components/ui'
 import {
+  formatCascadePath,
   resolveCascadeFromAddress,
   type AddressCascadeValue,
 } from '../data/addressTree'
+import type { MapPickResult } from '../data/mapPois'
 import { useApp } from '../store/AppStore'
 import type { Address } from '../types'
 
@@ -27,6 +30,7 @@ export function AddressEditPage() {
       isDefault: false,
     },
   )
+  const [poiName, setPoiName] = useState('')
 
   const cascade = useMemo(
     () => resolveCascadeFromAddress(form.city, form.district, form.street),
@@ -47,6 +51,24 @@ export function AddressEditPage() {
     }))
   }
 
+  function applyMapPick(next: MapPickResult) {
+    setPoiName(next.poiName)
+    setForm((prev) => ({
+      ...prev,
+      city: next.city,
+      district: next.district,
+      street: next.street,
+      inRange: next.inRange,
+      detail: prev.detail || next.detailHint || '',
+    }))
+  }
+
+  const mapSummary = poiName
+    ? `${poiName} · ${formatCascadePath(form)}`
+    : form.street
+      ? formatCascadePath(form)
+      : ''
+
   return (
     <section className="page pad">
       <NavBar title={exists ? '编辑地址' : '新增地址'} />
@@ -59,6 +81,7 @@ export function AddressEditPage() {
         <input value={form.phone} onChange={(e) => set('phone', e.target.value)} inputMode="tel" />
       </div>
 
+      <MapPickField summary={mapSummary} onPick={applyMapPick} />
       <AddressCascadeField value={cascade} onChange={applyCascade} />
 
       <div className="field">
@@ -68,16 +91,6 @@ export function AddressEditPage() {
           placeholder="如楼栋、门牌、工位号等"
           onChange={(e) => set('detail', e.target.value)}
         />
-      </div>
-      <div className="field">
-        <label>定位校验</label>
-        <div className={`cascade-range ${form.street ? (form.inRange ? 'ok' : 'warn') : ''}`}>
-          {!form.street
-            ? '请先选择收货位置'
-            : form.inRange
-              ? '定位成功 · 在配送范围内'
-              : '定位成功 · 超出配送范围'}
-        </div>
       </div>
       <label className="muted">
         <input type="checkbox" checked={form.isDefault} onChange={(e) => set('isDefault', e.target.checked)} />{' '}

@@ -65,7 +65,7 @@ export function StorePage() {
           </div>
           <p>月售 {store.monthlySales}</p>
           <p>
-            起送 {money(store.minOrder)} · 配送 {money(store.deliveryFee)} · 包装{' '}
+            起送 {money(store.minOrder)} · 预估配送费 {money(store.deliveryFee)} · 包装{' '}
             {money(store.orderPackingFee)}/单
             {store.extraFees.map((f) => ` · ${f.name}${money(f.amount)}`).join('')}
           </p>

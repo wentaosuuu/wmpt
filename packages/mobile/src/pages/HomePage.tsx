@@ -34,20 +34,6 @@ export function HomePage() {
 
   return (
     <section className="page home-page">
-      <div className="home-top">
-        <header className="home-nav">
-          <h1>云宝宝外卖</h1>
-        </header>
-        <div className="home-banner">
-          <div>
-            <h2>乐享好食光</h2>
-          </div>
-          <div className="banner-visual" aria-hidden>
-            🍱
-          </div>
-        </div>
-      </div>
-
       <div className="user-card">
         <div className="user-card-main">
           <div className="user-avatar">{user?.name?.slice(0, 1) ?? '用'}</div>
@@ -128,7 +114,7 @@ export function HomePage() {
               <p>月售 {s.monthlySales}</p>
               <div className="feed-tags">
                 <span>起送 {money(s.minOrder)}</span>
-                <span>配送 {money(s.deliveryFee)}</span>
+                <span>预估配送费 {money(s.deliveryFee)}</span>
               </div>
             </div>
           </Link>

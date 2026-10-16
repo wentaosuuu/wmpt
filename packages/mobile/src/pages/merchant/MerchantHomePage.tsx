@@ -1,68 +1,70 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  filterMerchantRevenueByRange,
+  merchantAmount,
+  merchantRevenueDims,
+  rangeForDim,
+  sumMerchantRevenue,
+  todayMerchantOverview,
+  type MerchantRevenueDim,
+} from '../../lib/merchantRevenue'
+import { MERCHANT_STORE_NAME, merchantStoreOrders } from '../../lib/merchantStore'
 import { money } from '../../lib/utils'
 import { useApp } from '../../store/AppStore'
 
-/** 商家侧有效营收：餐品+包装+附加（不含配送费） */
-function merchantAmount(o: { dishAmount: number; packingFee: number; extraFee: number }) {
-  return o.dishAmount + o.packingFee + o.extraFee
-}
+const defaultRange = rangeForDim('today')
 
 export function MerchantHomePage() {
-  const { orders } = useApp()
-  const pending = orders.filter((o) => o.status === 'pending_accept').length
-  const preparing = orders.filter((o) => o.status === 'preparing').length
-  const ready = orders.filter((o) => o.status === 'ready').length
-  const refundPending = orders.filter((o) => o.status === 'refunding').length
+  const { orders, user } = useApp()
+  const [dim, setDim] = useState<MerchantRevenueDim | 'custom'>('today')
+  const [start, setStart] = useState(defaultRange.start)
+  const [end, setEnd] = useState(defaultRange.end)
 
-  const revenue = useMemo(() => {
-    const valid = orders.filter(
-      (o) => !['pending_pay', 'cancelled', 'rejected'].includes(o.status),
-    )
-    const settled = orders.filter((o) => o.status === 'delivered')
-    const todaySales = valid.reduce((s, o) => s + merchantAmount(o), 0)
-    const settledAmt = settled.reduce((s, o) => s + merchantAmount(o), 0)
-    const refunding = orders
-      .filter((o) => o.status === 'refunding' || o.status === 'refunded')
-      .reduce((s, o) => s + (o.refund?.amount ?? 0), 0)
-    return {
-      todaySales,
-      orderCount: valid.length,
-      settledAmt,
-      settledCount: settled.length,
-      refunding,
-      avg: valid.length ? todaySales / valid.length : 0,
-    }
-  }, [orders])
+  const mine = useMemo(() => merchantStoreOrders(orders), [orders])
+
+  const pending = mine.filter((o) => o.status === 'pending_accept').length
+  const preparing = mine.filter((o) => o.status === 'preparing').length
+  const ready = mine.filter((o) => o.status === 'ready').length
+  const refundPending = mine.filter((o) => o.status === 'refunding').length
+
+  const today = useMemo(() => todayMerchantOverview(orders), [orders])
+
+  const rangeError = Boolean(start && end && start > end)
+
+  const rows = useMemo(() => {
+    if (rangeError) return []
+    return filterMerchantRevenueByRange(orders, start, end)
+  }, [orders, start, end, rangeError])
+
+  const total = useMemo(() => sumMerchantRevenue(rows), [rows])
+
+  function applyDim(next: MerchantRevenueDim) {
+    const range = rangeForDim(next)
+    setDim(next)
+    setStart(range.start)
+    setEnd(range.end)
+  }
 
   return (
     <section className="page role-page">
-      <div className="role-hero merchant">
-        <p>商家数据</p>
-        <h2>南门食堂 · 外卖档口</h2>
-        <span>今日经营概览 · 营收与订单量</span>
+      <div className="role-hero merchant compact">
+        <div className="mine-avatar">商</div>
+        <div>
+          <h2>{user?.name ?? '商家'}</h2>
+          <p>{MERCHANT_STORE_NAME}</p>
+        </div>
       </div>
 
       <div className="revenue-card merchant">
-        <div className="revenue-main">
-          <span>今日营收（餐品+包装）</span>
-          <strong>{money(revenue.todaySales)}</strong>
-          <em>
-            有效 {revenue.orderCount} 单 · 客单均 {money(revenue.avg)}
-          </em>
-        </div>
-        <div className="revenue-grid">
+        <div className="revenue-grid revenue-grid-2">
           <div>
-            <b>{money(revenue.settledAmt)}</b>
-            <span>已送达可结</span>
+            <b className="price">{money(today.sales)}</b>
+            <span>今日营收</span>
           </div>
           <div>
-            <b>{revenue.settledCount}</b>
-            <span>已完成单</span>
-          </div>
-          <div>
-            <b>{money(revenue.refunding)}</b>
-            <span>退款占用</span>
+            <b>{today.settledCount}</b>
+            <span>今日已完成单</span>
           </div>
         </div>
       </div>
@@ -86,18 +88,80 @@ export function MerchantHomePage() {
         </Link>
       </div>
 
-      <div className="card">
-        <Link className="entry" to="/m/orders">
-          <span>订单处理</span>
-          <span className="muted">接单 / 出餐 / 退款 ›</span>
-        </Link>
-        {refundPending ? (
-          <Link className="entry" to="/m/orders?tab=refunding">
-            <span>退款审核</span>
-            <span className="muted">{refundPending} 笔待处理 ›</span>
-          </Link>
-        ) : null}
+      <div className="role-head rider-income-section-hd">
+        <h3>营收明细</h3>
       </div>
+
+      <div className="rider-income-filter">
+        <div className="rider-income-tabs">
+          {merchantRevenueDims.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              className={dim === d.id ? 'on' : ''}
+              onClick={() => applyDim(d.id)}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+        <div className="rider-income-range compact">
+          <input
+            type="datetime-local"
+            aria-label="开始时间"
+            value={start}
+            max={end || undefined}
+            onChange={(e) => {
+              setStart(e.target.value)
+              setDim('custom')
+            }}
+          />
+          <em>至</em>
+          <input
+            type="datetime-local"
+            aria-label="结束时间"
+            value={end}
+            min={start || undefined}
+            onChange={(e) => {
+              setEnd(e.target.value)
+              setDim('custom')
+            }}
+          />
+        </div>
+        {rangeError ? <p className="rider-income-range-error">开始时间不能晚于结束时间</p> : null}
+      </div>
+
+      <div className="card rider-income-summary">
+        <div>
+          <span>营收合计</span>
+          <b className="price">{money(total)}</b>
+        </div>
+        <div>
+          <span>完成单量</span>
+          <b>{rows.length}</b>
+        </div>
+      </div>
+
+      {rangeError ? (
+        <div className="empty">请调整时间范围后再查询</div>
+      ) : !rows.length ? (
+        <div className="empty">该时间范围暂无已完成订单</div>
+      ) : (
+        <div className="bill-list rider-income-list">
+          {rows.map((o) => (
+            <Link key={o.id} className="bill-row" to={`/order/${o.id}`}>
+              <div>
+                <strong>{o.id}</strong>
+                <p>{o.createdAt}</p>
+              </div>
+              <span className="bill-row-right">
+                <b className="price">+{money(merchantAmount(o))}</b>
+                <em>›</em>
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

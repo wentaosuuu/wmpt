@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
+import { Field, FloatTip, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
+
+const AUDIT_TIP =
+  '审核权限是指对订单取消、订单退款的通过/驳回按钮操作权限。'
 import { useAdmin } from '../../store/AdminStore'
 import type { StoreStaff } from '../../types'
 
@@ -90,7 +93,17 @@ export function StaffPage() {
                 <th>姓名</th>
                 <th>所属门店</th>
                 <th>岗位</th>
-                <th>审核权限</th>
+                <th>
+                  审核权限
+                  <i
+                    className="tip-icon"
+                    tabIndex={0}
+                    data-tip={AUDIT_TIP}
+                    aria-label="审核权限说明"
+                  >
+                    ?
+                  </i>
+                </th>
                 <th>创建时间</th>
                 <th>账号状态</th>
                 <th>操作</th>
@@ -228,7 +241,14 @@ export function StaffPage() {
           <Field label="岗位">
             <input value="员工" disabled />
           </Field>
-          <Field label="是否有审核权限">
+          <Field
+            label={
+              <>
+                是否有审核权限
+                <FloatTip label="审核权限说明" text={AUDIT_TIP} />
+              </>
+            }
+          >
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
               <button
                 type="button"

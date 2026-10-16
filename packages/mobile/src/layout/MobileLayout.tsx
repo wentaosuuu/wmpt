@@ -1,10 +1,16 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { RoleSwitcher, roleHome, roleLabel } from '../components/RoleSwitcher'
+import { RoleSwitcher, roleHome } from '../components/RoleSwitcher'
 import { ToastStack } from '../components/ui'
 import { useApp } from '../store/AppStore'
 import type { AppRole } from '../types'
 import './MobileLayout.css'
+
+function brandTitle(role: AppRole) {
+  if (role === 'merchant') return '商家端'
+  if (role === 'rider') return '骑手端'
+  return '消费者'
+}
 
 function TabIcon({
   name,
@@ -81,14 +87,12 @@ function tabsFor(role: AppRole) {
     return [
       { to: '/m', end: true, label: '数据', icon: 'home' as const },
       { to: '/m/orders', label: '订单处理', icon: 'order' as const },
-      { to: '/m/mine', label: '我的', icon: 'mine' as const },
     ]
   }
   if (role === 'rider') {
     return [
       { to: '/r', end: true, label: '数据', icon: 'home' as const },
       { to: '/r/tasks', label: '订单处理', icon: 'task' as const },
-      { to: '/r/mine', label: '我的', icon: 'mine' as const },
     ]
   }
   return [
@@ -145,7 +149,7 @@ function Shell({ withTab }: { withTab: boolean }) {
             className="role-brand"
             onClick={() => navigate(roleHome(role))}
           >
-            云宝宝 · {roleLabel(role)}
+            {brandTitle(role)}
           </button>
           <RoleSwitcher />
         </div>

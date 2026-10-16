@@ -4,7 +4,6 @@ import { useApp } from '../store/AppStore'
 export function MinePage() {
   const { user, orders, addresses } = useApp()
   const refunding = orders.filter((o) => o.status === 'refunding').length
-  const addr = addresses.find((a) => a.isDefault) ?? addresses[0]
 
   return (
     <section className="page mine-page">
@@ -13,7 +12,6 @@ export function MinePage() {
         <div>
           <h2>{user?.name}</h2>
           <p>{user?.phone}</p>
-          <p>{addr ? `${addr.district} · ${addr.street}` : user?.campus}</p>
         </div>
       </div>
 
@@ -43,15 +41,11 @@ export function MinePage() {
         </Link>
         <Link className="entry" to="/address">
           <span>收货地址</span>
-          <span className="muted">行政区划校验 ›</span>
+          <span className="muted">›</span>
         </Link>
         <Link className="entry" to="/service">
           <span>联系客服</span>
-          <span className="muted">{refunding ? `${refunding} 笔售后中 ›` : '09:00-21:00 ›'}</span>
-        </Link>
-        <Link className="entry" to="/privacy">
-          <span>隐私说明</span>
-          <span className="muted">查看 ›</span>
+          <span className="muted">›</span>
         </Link>
       </div>
     </section>

@@ -57,6 +57,18 @@ export function BillDetailPage() {
             <span>订单编号</span>
             <OrderNo id={order.id} className="detail" />
           </div>
+          {order.tradeNo ? (
+            <div>
+              <span>支付流水号</span>
+              <b>{order.tradeNo}</b>
+            </div>
+          ) : null}
+          {order.refundTradeNo ? (
+            <div>
+              <span>退款流水号</span>
+              <b>{order.refundTradeNo}</b>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -73,7 +85,6 @@ export function BillDetailPage() {
         ))}
         <MoneyRow label="包装费" value={money(order.packingFee)} />
         <MoneyRow label="配送费" value={money(order.deliveryFee)} />
-        {order.extraFee > 0 ? <MoneyRow label="附加费用" value={money(order.extraFee)} /> : null}
         <MoneyRow label="实付金额" value={money(order.payable)} strong />
       </div>
 
@@ -83,6 +94,7 @@ export function BillDetailPage() {
           <p>
             {order.refund.reason} · 退款 {money(order.refund.expected)}
           </p>
+          {order.refund.remark ? <p className="muted">备注：{order.refund.remark}</p> : null}
           <Tag tone="orange">
             {order.refund.status === 'pending'
               ? '审核中'

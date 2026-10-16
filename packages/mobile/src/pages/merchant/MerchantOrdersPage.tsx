@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DeliveryProofView } from '../../components/DeliveryProof'
 import { Empty, MoneyRow, OrderNo, Tag } from '../../components/ui'
+import { merchantStoreOrders } from '../../lib/merchantStore'
 import { money, statusText } from '../../lib/utils'
 import { useApp } from '../../store/AppStore'
 import type { Order } from '../../types'
@@ -33,6 +34,7 @@ export function MerchantOrdersPage() {
     merchantReady,
     merchantRefundApprove,
     merchantRefundReject,
+    toast,
   } = useApp()
   const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState<TabId>(() => {
@@ -40,6 +42,8 @@ export function MerchantOrdersPage() {
     return isTabId(q) ? q : 'pending_accept'
   })
   const [rejectId, setRejectId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState('已售罄')
+  const [rejectOther, setRejectOther] = useState('')
   const [refundRejectId, setRefundRejectId] = useState<string | null>(null)
   const [proofSrc, setProofSrc] = useState<string | null>(null)
 
@@ -47,6 +51,8 @@ export function MerchantOrdersPage() {
     const q = searchParams.get('tab')
     if (isTabId(q) && q !== tab) setTab(q)
   }, [searchParams, tab])
+
+  const mine = useMemo(() => merchantStoreOrders(orders), [orders])
 
   const counts = useMemo(() => {
     const map: Record<TabId, number> = {
@@ -56,7 +62,7 @@ export function MerchantOrdersPage() {
       refunding: 0,
       done: 0,
     }
-    for (const o of orders) {
+    for (const o of mine) {
       if (o.status === 'pending_accept') map.pending_accept += 1
       else if (o.status === 'preparing') map.preparing += 1
       else if (o.status === 'ready') map.ready += 1
@@ -68,16 +74,16 @@ export function MerchantOrdersPage() {
       }
     }
     return map
-  }, [orders])
+  }, [mine])
 
   const list = useMemo(() => {
     if (tab === 'done') {
-      return orders.filter((o) =>
+      return mine.filter((o) =>
         ['picked', 'delivering', 'delivered', 'rejected', 'cancelled', 'refunded'].includes(o.status),
       )
     }
-    return orders.filter((o) => o.status === tab)
-  }, [orders, tab])
+    return mine.filter((o) => o.status === tab)
+  }, [mine, tab])
 
   function switchTab(id: TabId) {
     setTab(id)
@@ -106,7 +112,7 @@ export function MerchantOrdersPage() {
       {list.map((o) => (
         <div key={o.id} className="card role-order">
           <div className="row">
-            <OrderNo id={o.id} short />
+            <OrderNo id={o.id} />
             <Tag
               tone={
                 o.status === 'pending_accept' || o.status === 'refunding'
@@ -151,6 +157,11 @@ export function MerchantOrdersPage() {
               <p>
                 <b>退款原因</b> {o.refund.reason}
               </p>
+              {o.refund.remark ? (
+                <p>
+                  <b>备注</b> {o.refund.remark}
+                </p>
+              ) : null}
               <p>
                 <b>申请金额</b> {money(o.refund.amount)} · {o.refund.createdAt}
               </p>
@@ -192,7 +203,15 @@ export function MerchantOrdersPage() {
           ) : null}
           {o.status === 'pending_accept' ? (
             <div className="role-actions">
-              <button className="btn ghost" type="button" onClick={() => setRejectId(o.id)}>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => {
+                  setRejectReason('已售罄')
+                  setRejectOther('')
+                  setRejectId(o.id)
+                }}
+              >
                 拒单
               </button>
               <button className="btn" type="button" onClick={() => merchantAccept(o.id)}>
@@ -233,6 +252,32 @@ export function MerchantOrdersPage() {
           <div className="role-sheet-card">
             <h3>确认拒单？</h3>
             <p className="muted">拒单后将通知用户并退款，请选择原因</p>
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>拒单原因</label>
+              <select
+                value={rejectReason}
+                onChange={(e) => {
+                  setRejectReason(e.target.value)
+                  if (e.target.value !== '其他') setRejectOther('')
+                }}
+              >
+                <option>已售罄</option>
+                <option>其他</option>
+              </select>
+            </div>
+            {rejectReason === '其他' ? (
+              <div className="field">
+                <label>补充说明</label>
+                <textarea
+                  className="remark-input"
+                  rows={3}
+                  maxLength={80}
+                  placeholder="请填写拒单原因"
+                  value={rejectOther}
+                  onChange={(e) => setRejectOther(e.target.value)}
+                />
+              </div>
+            ) : null}
             <div className="role-actions" style={{ marginTop: 12 }}>
               <button className="btn ghost" type="button" onClick={() => setRejectId(null)}>
                 取消
@@ -241,7 +286,12 @@ export function MerchantOrdersPage() {
                 className="btn danger"
                 type="button"
                 onClick={() => {
-                  merchantReject(rejectId, '已售罄 / 无法履约')
+                  const extra = rejectOther.trim()
+                  if (rejectReason === '其他' && !extra) {
+                    toast('请填写其他拒单原因')
+                    return
+                  }
+                  merchantReject(rejectId, rejectReason === '其他' ? extra : rejectReason)
                   setRejectId(null)
                 }}
               >

@@ -2,10 +2,12 @@ import type { Ticket } from '../types'
 
 const API = '/api/tickets'
 
-function normalizeTicket(raw: Ticket & { status?: string }): Ticket {
+function normalizeTicket(raw: Ticket & { status?: string; repliedAt?: string; phone?: string }): Ticket {
   return {
     ...raw,
+    phone: raw.phone ?? '',
     status: raw.status === 'done' ? 'done' : 'open',
+    repliedAt: raw.repliedAt ?? '',
   }
 }
 

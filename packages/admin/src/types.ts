@@ -31,7 +31,7 @@ export type Merchant = {
   doorPhoto?: string
   /** 起送费（元）：消费者餐品金额未达此值不可下单 */
   minOrder: number
-  /** 配送费（元），与移动端展示一致 */
+  /** 预估配送费（元），与移动端展示一致 */
   deliveryFee: number
   /** 经营品类（与移动端品类筛选一致） */
   cuisine: string
@@ -158,7 +158,15 @@ export type AdminOrderStatus =
   | 'cancelled'
   | 'refund_review'
   | 'refunded'
-  | 'dispatch_fail'
+
+/** 订单商品行，规格与单品备注与移动端下单一致 */
+export type AdminOrderLine = {
+  name: string
+  spec: string
+  qty: number
+  /** 用户对该商品填写的备注 */
+  remark?: string
+}
 
 export type AdminOrder = {
   id: string
@@ -167,25 +175,31 @@ export type AdminOrder = {
   user: string
   phone: string
   address: string
-  items: string
+  items: AdminOrderLine[]
   amount: number
   packingFee: number
   deliveryFee: number
   status: AdminOrderStatus
   createdAt: string
-  prepMinutes?: number
+  /** 出餐时按门店先后顺序自动生成的 3 位取餐号 */
+  pickupNo?: string
   rider?: string
   cancelReason?: string
   /** 用户申请取消前订单所处履约阶段 */
   cancelFromStatus?: AdminOrderStatus
   refundReason?: string
   refundAmount?: number
+  /** 用户下单时填写的订单备注 */
+  remark: string
+  /** 履约过程中的系统说明，不作为用户备注展示 */
   note: string
 }
 
 export type TradeRecord = {
   id: string
+  /** 流水号：TF + yyyyMMddHHmmss + 4 位序号 */
   tradeNo: string
+  /** 订单号：WMPT + yyyyMMdd + 6 位当日序号 */
   orderId: string
   storeId: string
   storeName: string
@@ -197,22 +211,25 @@ export type TradeRecord = {
   mealAmount: number
   packingFee: number
   deliveryFee: number
-  status: 'success' | 'failed' | 'processing'
+  status: 'success' | 'failed'
   createdAt: string
   thirdPartyNo: string
-  remark: string
 }
 
 export type Ticket = {
   id: string
   type: 'consult' | 'complaint'
   user: string
+  /** 用户手机号，便于客服沟通 */
+  phone: string
   content: string
   /** open=待处理，done=已完结 */
   status: 'open' | 'done'
   handler: string
   result: string
   createdAt: string
+  /** 客服回复完结时间，待处理为空 */
+  repliedAt: string
 }
 
 export type Coverage = {
@@ -247,7 +264,7 @@ export type StoreStaff = {
   phone: string
   storeId: string
   storeName: string
-  /** 是否有审核权限（如接单相关审核） */
+  /** 是否有审核权限（订单取消、订单退款的通过/驳回） */
   canAudit: boolean
   status: 'enabled' | 'disabled'
   createdAt: string

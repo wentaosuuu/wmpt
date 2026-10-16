@@ -30,11 +30,13 @@ function reviewCellClass(value: string) {
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
-  const { orders, cancelOrder, toast } = useApp()
+  const { orders, cancelOrder, toast, role } = useApp()
   const order = orders.find((o) => o.id === id)
   const navigate = useNavigate()
   const [reason, setReason] = useState('计划有变')
   const [showCancelRules, setShowCancelRules] = useState(false)
+  /** 取消/退款/客服仅消费者端展示 */
+  const isConsumer = role === 'consumer'
 
   if (!order) {
     return (
@@ -56,6 +58,8 @@ export function OrderDetailPage() {
           <p className="muted">实际送达 {order.eta}</p>
         ) : null}
         <OrderNo id={order.id} className="detail" />
+        {order.tradeNo ? <p className="muted">支付流水号 {order.tradeNo}</p> : null}
+        {order.refundTradeNo ? <p className="muted">退款流水号 {order.refundTradeNo}</p> : null}
         <p className="muted">
           {order.storeName} · {order.createdAt}
         </p>
@@ -76,7 +80,6 @@ export function OrderDetailPage() {
         ))}
         <MoneyRow label="包装费" value={money(order.packingFee)} />
         <MoneyRow label="配送费" value={money(order.deliveryFee)} />
-        <MoneyRow label="附加费用" value={money(order.extraFee)} />
         <MoneyRow label="实付" value={money(order.payable)} strong />
       </div>
       <div className="card">
@@ -95,12 +98,13 @@ export function OrderDetailPage() {
           <DeliveryProofView src={order.deliveryProof} caption="骑手送达凭证" />
         </div>
       ) : null}
-      {order.refund ? (
+      {isConsumer && order.refund ? (
         <div className="card">
           <h4>退款进度</h4>
           <p>
             {order.refund.reason} · 预计退回 {money(order.refund.expected)}
           </p>
+          {order.refund.remark ? <p className="muted">备注：{order.refund.remark}</p> : null}
           <Tag
             tone={
               order.refund.status === 'pending'
@@ -120,6 +124,7 @@ export function OrderDetailPage() {
           </Tag>
         </div>
       ) : null}
+      {isConsumer ? (
       <div className="pad" style={{ display: 'grid', gap: 8 }}>
         <button className="cancel-rule-entry" type="button" onClick={() => setShowCancelRules(true)}>
           取消与退款规则
@@ -173,8 +178,9 @@ export function OrderDetailPage() {
           联系客服
         </button>
       </div>
+      ) : null}
 
-      {showCancelRules ? (
+      {isConsumer && showCancelRules ? (
         <div className="role-sheet" onClick={() => setShowCancelRules(false)}>
           <div className="role-sheet-card cancel-rule-sheet" onClick={(e) => e.stopPropagation()}>
             <h3>取消与退款规则</h3>
@@ -188,7 +194,11 @@ export function OrderDetailPage() {
                     <th>订单状态</th>
                     <th>取消订单</th>
                     <th>申请退款</th>
-                    <th>是否需商家审核</th>
+                    <th>
+                      是否需
+                      <br />
+                      商家审核
+                    </th>
                     <th>说明</th>
                   </tr>
                 </thead>

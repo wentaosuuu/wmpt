@@ -25,7 +25,7 @@ export const menus: MenuNode[] = [
       { key: '/products/dishes', to: '/products/dishes', label: '菜品管理' },
       { key: '/products/categories', to: '/products/categories', label: '菜品分类' },
       { key: '/products/specs', to: '/products/specs', label: '规格管理' },
-      { key: '/products/stock', to: '/products/stock', label: '库存售罄' },
+      { key: '/products/stock', to: '/products/stock', label: '售罄管理' },
       { key: '/products/packing', to: '/products/packing', label: '包装费设置' },
     ],
   },
@@ -35,14 +35,6 @@ export const menus: MenuNode[] = [
     children: [
       { key: '/orders', to: '/orders', label: '订单管理', end: true },
       { key: '/orders/cancel', to: '/orders/cancel', label: '取消审核' },
-    ],
-  },
-  {
-    key: 'delivery',
-    label: '配送管理',
-    children: [
-      { key: '/delivery/coverage', to: '/delivery/coverage', label: '覆盖区域' },
-      { key: '/delivery/exception', to: '/delivery/exception', label: '异常处理' },
     ],
   },
   { key: '/riders', label: '骑手管理', to: '/riders' },

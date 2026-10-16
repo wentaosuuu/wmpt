@@ -4,12 +4,17 @@ import { NavBar } from '../components/ui'
 import { money } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
+const BILL_MONTHS = ['2026-10', '2026-09', '2026-08'] as const
+
 export function BillsPage() {
   const { orders } = useApp()
-  const [month, setMonth] = useState('2026-09')
+  const [month, setMonth] = useState<string>('2026-09')
 
   const rows = useMemo(
-    () => orders.filter((o) => o.createdAt.startsWith(month)),
+    () =>
+      orders
+        .filter((o) => o.createdAt.startsWith(month) && o.payChannel)
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
     [orders, month],
   )
 
@@ -18,8 +23,11 @@ export function BillsPage() {
       <NavBar title="我的账单" />
       <div className="bills-toolbar">
         <select value={month} onChange={(e) => setMonth(e.target.value)}>
-          <option value="2026-09">2026-09</option>
-          <option value="2026-08">2026-08</option>
+          {BILL_MONTHS.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
         </select>
       </div>
       {!rows.length ? (

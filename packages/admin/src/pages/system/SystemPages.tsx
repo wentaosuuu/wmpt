@@ -26,11 +26,12 @@ function CuisineIcon({ icon, className }: { icon: string; className?: string }) 
 }
 
 export function UsersPage() {
-  const { sysUsers, depts, roles, saveSysUser, updateSysUser, notify } = useAdmin()
+  const { sysUsers, depts, roles, saveSysUser, updateSysUser, resetSysPassword, notify } = useAdmin()
   const [kw, setKw] = useState('')
   const [current, setCurrent] = useState<SysUser | null>(null)
   const [form, setForm] = useState<SysUser | null>(null)
-  const [mode, setMode] = useState<'edit' | 'status' | null>(null)
+  const [mode, setMode] = useState<'edit' | 'status' | 'reset' | null>(null)
+  const [resetPwd, setResetPwd] = useState('')
 
   const list = useMemo(
     () =>
@@ -123,6 +124,17 @@ export function UsersPage() {
                       }}
                     >
                       {u.status === 'enabled' ? '停用' : '启用'}
+                    </button>
+                    <button
+                      className="link-btn"
+                      type="button"
+                      onClick={() => {
+                        setCurrent(u)
+                        setResetPwd('')
+                        setMode('reset')
+                      }}
+                    >
+                      重置密码
                     </button>
                   </td>
                 </tr>
@@ -265,6 +277,88 @@ export function UsersPage() {
         <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
           确认{current?.status === 'enabled' ? '停用' : '启用'}手机号「{current?.phone}」吗？
         </p>
+      </Modal>
+
+      <Modal
+        open={mode === 'reset' && !!current}
+        title="重置密码"
+        onClose={() => {
+          setMode(null)
+          setResetPwd('')
+        }}
+        footer={
+          resetPwd ? (
+            <>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard.writeText(resetPwd).then(
+                    () => notify('密码已复制，请尽快通知用户'),
+                    () => notify('复制失败，请手动选中密码'),
+                  )
+                }}
+              >
+                复制密码
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => {
+                  setMode(null)
+                  setResetPwd('')
+                }}
+              >
+                关闭
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => {
+                  setMode(null)
+                  setResetPwd('')
+                }}
+              >
+                取消
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => {
+                  if (!current) return
+                  setResetPwd(resetSysPassword(current.phone))
+                  notify('密码已重置，请复制后尽快通知用户')
+                }}
+              >
+                确认重置
+              </button>
+            </>
+          )
+        }
+      >
+        {resetPwd ? (
+          <div className="reset-pwd-result">
+            <p>
+              「{current?.name} / {current?.phone}」的登录密码已重置。请复制下方密码并尽快通知用户，关闭后将无法再次查看明文。
+            </p>
+            <div className="reset-pwd-code">{resetPwd}</div>
+          </div>
+        ) : (
+          <div className="reset-pwd-guide">
+            <p>
+              即将重置「{current?.name} / {current?.phone}」的登录密码。
+            </p>
+            <ul>
+              <li>原密码立即失效，用户需用新密码登录。</li>
+              <li>系统会生成 12 位随机密码（字母 + 数字，避开易混淆字符）。</li>
+              <li>请复制新密码，尽快通知用户。</li>
+              <li>请提醒用户登录后尽快在个人中心修改密码，勿在公开场合转发。</li>
+            </ul>
+          </div>
+        )}
       </Modal>
     </>
   )

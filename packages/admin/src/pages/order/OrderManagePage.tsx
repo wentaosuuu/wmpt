@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
 import { useOptionalStoreFilter } from '../../hooks/useStoreFilter'
 import { statusLabel, useAdmin } from '../../store/AdminStore'
-import type { AdminOrder } from '../../types'
+import type { AdminOrder, AdminOrderLine } from '../../types'
 
 type TabKey =
   | 'all'
@@ -11,6 +11,7 @@ type TabKey =
   | 'ready'
   | 'delivering'
   | 'cancel_review'
+  | 'refund_review'
   | 'done'
 
 const tabs: { key: TabKey; label: string }[] = [
@@ -20,6 +21,7 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'ready', label: '待取餐' },
   { key: 'delivering', label: '配送中' },
   { key: 'cancel_review', label: '取消待审' },
+  { key: 'refund_review', label: '退款待审' },
   { key: 'done', label: '已完成' },
 ]
 
@@ -33,12 +35,44 @@ function matchTab(o: AdminOrder, tab: TabKey) {
 
 function statusTone(status: string) {
   if (['delivered', 'refunded'].includes(status)) return 'success' as const
-  if (['rejected', 'cancelled', 'dispatch_fail'].includes(status)) return 'danger' as const
+  if (['rejected', 'cancelled'].includes(status)) return 'danger' as const
   if (['pending_accept', 'cancel_review', 'refund_review'].includes(status)) return 'warning' as const
   return 'info' as const
 }
 
-type ActionMode = 'view' | 'accept' | 'reject' | 'prep' | 'handover' | null
+export function OrderLines({ items }: { items: AdminOrderLine[] }) {
+  return (
+    <div className="order-lines">
+      {items.map((item, index) => (
+        <div key={`${item.name}-${item.spec}-${index}`} className="order-line">
+          <span className="order-line-name">
+            {item.name}
+            <em>×{item.qty}</em>
+          </span>
+          {item.spec || item.remark ? (
+            <span className="order-line-meta">
+              {item.spec ? <em>规格：{item.spec}</em> : null}
+              {item.remark ? <span>备注：{item.remark}</span> : null}
+            </span>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+type ActionMode = 'view' | 'accept' | 'reject' | 'prep' | null
+
+/** 按门店出餐先后生成 001–999 的三位取餐号，满号后从 001 循环 */
+function nextPickupNo(list: AdminOrder[], storeId: string) {
+  const nums = list
+    .filter((o) => o.storeId === storeId)
+    .map((o) => Number.parseInt(o.pickupNo || '', 10))
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 999)
+  const max = nums.length ? Math.max(...nums) : 0
+  const next = max >= 999 ? 1 : max + 1
+  return String(next).padStart(3, '0')
+}
 
 export function OrderManagePage() {
   const { orders, updateOrder, notify } = useAdmin()
@@ -47,9 +81,8 @@ export function OrderManagePage() {
   const [kw, setKw] = useState('')
   const [current, setCurrent] = useState<AdminOrder | null>(null)
   const [mode, setMode] = useState<ActionMode>(null)
-  const [minutes, setMinutes] = useState(15)
   const [reason, setReason] = useState('已售罄')
-  const [riderCode, setRiderCode] = useState('')
+  const [rejectOther, setRejectOther] = useState('')
 
   const scopedOrders = useMemo(
     () => orders.filter((o) => matchStore(o.storeId)),
@@ -77,9 +110,8 @@ export function OrderManagePage() {
   function open(o: AdminOrder, m: ActionMode) {
     setCurrent(o)
     setMode(m)
-    setMinutes(o.prepMinutes ?? 15)
     setReason('已售罄')
-    setRiderCode('')
+    setRejectOther('')
   }
 
   function close() {
@@ -91,7 +123,7 @@ export function OrderManagePage() {
     <>
       <PageHeader
         title="订单管理"
-        desc="同一订单按状态推进：待接单 → 备餐中 → 待取餐 → 配送中。在本页完成接单、出餐与取餐核对。"
+        desc="同一订单按状态推进：待接单 → 备餐中 → 待取餐 → 配送中。商家完成接单与出餐后，待取餐由骑手到店凭取餐号取餐。"
       />
       <Panel>
         <div className="order-tabs">
@@ -123,7 +155,8 @@ export function OrderManagePage() {
             <thead>
               <tr>
                 <th>订单号</th>
-                <th>门店 / 用户</th>
+                <th>门店</th>
+                <th>用户</th>
                 <th>商品</th>
                 <th>金额</th>
                 <th>状态</th>
@@ -135,13 +168,14 @@ export function OrderManagePage() {
               {list.map((o) => (
                 <tr key={o.id}>
                   <td>{o.id}</td>
+                  <td>{o.storeName}</td>
                   <td>
-                    {o.storeName}
-                    <span className="sub">
-                      {o.user} {o.phone}
-                    </span>
+                    {o.user}
+                    <span className="sub">{o.phone}</span>
                   </td>
-                  <td>{o.items}</td>
+                  <td>
+                    <OrderLines items={o.items} />
+                  </td>
                   <td>
                     ¥{o.amount.toFixed(2)}
                     <span className="sub">
@@ -171,17 +205,12 @@ export function OrderManagePage() {
                         出餐完成
                       </button>
                     ) : null}
-                    {['ready', 'dispatching', 'picked'].includes(o.status) ? (
-                      <button className="link-btn" type="button" onClick={() => open(o, 'handover')}>
-                        取餐核对
-                      </button>
-                    ) : null}
                   </td>
                 </tr>
               ))}
               {!list.length ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="empty-block">暂无订单</div>
                   </td>
                 </tr>
@@ -210,14 +239,14 @@ export function OrderManagePage() {
               { label: '门店', value: current.storeName },
               { label: '用户', value: `${current.user} ${current.phone}` },
               { label: '地址', value: current.address },
-              { label: '商品', value: current.items },
+              { label: '商品', value: <OrderLines items={current.items} /> },
               { label: '金额', value: `¥${current.amount.toFixed(2)}` },
               { label: '包装费', value: `¥${current.packingFee.toFixed(2)}` },
               { label: '配送费', value: `¥${current.deliveryFee.toFixed(2)}` },
               { label: '状态', value: statusLabel[current.status] },
-              { label: '备餐', value: current.prepMinutes ? `${current.prepMinutes} 分钟` : '-' },
+              { label: '取餐号', value: current.pickupNo || '-' },
               { label: '骑手', value: current.rider || '-' },
-              { label: '备注', value: current.note },
+              { label: '备注', value: current.remark.trim() || '无' },
             ]}
           />
         ) : null}
@@ -239,8 +268,7 @@ export function OrderManagePage() {
                 if (!current) return
                 updateOrder(current.id, {
                   status: 'preparing',
-                  prepMinutes: minutes,
-                  note: `已接单，备餐 ${minutes} 分钟`,
+                  note: '已接单，开始备餐',
                 })
                 notify('接单成功，订单进入备餐中')
                 setTab('preparing')
@@ -255,12 +283,10 @@ export function OrderManagePage() {
         <DescList
           items={[
             { label: '订单号', value: current?.id },
-            { label: '商品', value: current?.items },
+            { label: '商品', value: current ? <OrderLines items={current.items} /> : '-' },
           ]}
         />
-        <Field label="预计备餐时长（分钟）">
-          <input type="number" min={5} value={minutes} onChange={(e) => setMinutes(Number(e.target.value) || 0)} />
-        </Field>
+        <p style={{ margin: '8px 0 0', fontSize: 14, color: '#4e5969' }}>确认接单后订单进入备餐中。</p>
       </Modal>
 
       <Modal
@@ -277,7 +303,13 @@ export function OrderManagePage() {
               type="button"
               onClick={() => {
                 if (!current) return
-                updateOrder(current.id, { status: 'rejected', note: `拒单：${reason}` })
+                const extra = rejectOther.trim()
+                if (reason === '其他' && !extra) {
+                  notify('请填写其他拒单原因')
+                  return
+                }
+                const text = reason === '其他' ? extra : reason
+                updateOrder(current.id, { status: 'rejected', note: `拒单：${text}` })
                 notify('已拒单，用户将收到退款')
                 close()
               }}
@@ -288,12 +320,28 @@ export function OrderManagePage() {
         }
       >
         <Field label="拒单原因">
-          <select value={reason} onChange={(e) => setReason(e.target.value)}>
+          <select
+            value={reason}
+            onChange={(e) => {
+              setReason(e.target.value)
+              if (e.target.value !== '其他') setRejectOther('')
+            }}
+          >
             <option>已售罄</option>
-            <option>超出配送范围</option>
-            <option>高峰无法履约</option>
+            <option>其他</option>
           </select>
         </Field>
+        {reason === '其他' ? (
+          <Field label="补充说明" required>
+            <textarea
+              rows={3}
+              maxLength={80}
+              placeholder="请填写拒单原因"
+              value={rejectOther}
+              onChange={(e) => setRejectOther(e.target.value)}
+            />
+          </Field>
+        ) : null}
       </Modal>
 
       <Modal
@@ -310,11 +358,13 @@ export function OrderManagePage() {
               type="button"
               onClick={() => {
                 if (!current) return
+                const pickupNo = current.pickupNo || nextPickupNo(orders, current.storeId)
                 updateOrder(current.id, {
                   status: 'ready',
-                  note: '出餐完成，等待骑手取餐 / 发送配送',
+                  pickupNo,
+                  note: `出餐完成，取餐号 ${pickupNo}，等待骑手取餐`,
                 })
-                notify('出餐完成，等待骑手取餐')
+                notify(`出餐完成，取餐号 ${pickupNo}`)
                 setTab('ready')
                 close()
               }}
@@ -324,56 +374,9 @@ export function OrderManagePage() {
           </>
         }
       >
-        <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
-          确认订单 {current?.id} 已出餐？确认后进入「待取餐」。
+        <p style={{ margin: 0, fontSize: 14, color: '#4e5969', lineHeight: 1.7 }}>
+          确认订单 {current?.id} 已出餐？确认后系统按本店出餐先后自动生成 3 位取餐号，进入「待取餐」。
         </p>
-      </Modal>
-
-      <Modal
-        open={mode === 'handover' && !!current}
-        title="骑手取餐核对"
-        onClose={close}
-        footer={
-          <>
-            <button className="btn ghost" type="button" onClick={close}>
-              取消
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                if (!current) return
-                if (!riderCode.trim()) {
-                  notify('请填写骑手取餐凭证')
-                  return
-                }
-                updateOrder(current.id, {
-                  status: 'picked',
-                  rider: current.rider ?? '李骑手',
-                  note: `商家已核对凭证 ${riderCode}，交餐确认完成`,
-                })
-                notify('交餐确认完成')
-                close()
-              }}
-            >
-              确认交餐
-            </button>
-          </>
-        }
-      >
-        <DescList
-          items={[
-            { label: '订单号', value: current?.id },
-            { label: '商品', value: current?.items },
-          ]}
-        />
-        <Field label="骑手取餐凭证号">
-          <input
-            value={riderCode}
-            onChange={(e) => setRiderCode(e.target.value)}
-            placeholder="请输入配送单号或取餐码"
-          />
-        </Field>
       </Modal>
     </>
   )

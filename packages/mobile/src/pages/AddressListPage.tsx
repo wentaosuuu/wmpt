@@ -23,7 +23,6 @@ export function AddressListPage() {
             {a.city} {a.district} {a.street}
           </p>
           <p className="muted">{a.detail}</p>
-          {a.inRange ? <Tag tone="green">在配送范围内</Tag> : <Tag tone="red">超出配送范围</Tag>}
           <div className="row" style={{ marginTop: 10 }}>
             <button className="btn ghost" type="button" onClick={() => navigate(`/address/${a.id}`)}>
               编辑

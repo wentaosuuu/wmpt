@@ -1,8 +1,54 @@
-import { useMemo, useState } from 'react'
-import { DescList, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ORDER_ID_TIP, TRADE_NO_TIP } from '@wmpt/shared'
+import { DescList, FloatTip, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
 import { channelLabel, tradeStatusLabel, tradeTypeLabel } from '../../lib/options'
 import { useAdmin } from '../../store/AdminStore'
 import type { TradeRecord } from '../../types'
+
+const PAGE_SIZE = 10
+
+const STAT_TIPS = {
+  count: '当前筛选条件下的流水条数，含支付与退款、成功与失败，不区分状态。',
+  pay: '筛选结果中支付流水的交易金额合计（仅成功）。',
+  refund: '筛选结果中退款流水的交易金额合计（仅成功）。',
+  net: '成功支付金额 − 成功退款金额。',
+  meal: '成功支付的餐品金额 − 成功退款的餐品金额。',
+  packing: '成功支付的包装费 − 成功退款的包装费。',
+  delivery: '成功支付的骑手配送费 − 成功退款的骑手配送费。',
+} as const
+
+function StatLabel({ label, tip }: { label: string; tip: string }) {
+  return (
+    <div className="label">
+      {label}
+      <i className="tip-icon" tabIndex={0} data-tip={tip} aria-label={`${label}说明`}>
+        ?
+      </i>
+    </div>
+  )
+}
+
+function StatCard({
+  label,
+  tip,
+  value,
+  hint,
+}: {
+  label: string
+  tip: string
+  value: ReactNode
+  hint?: ReactNode
+}) {
+  return (
+    <div className="stat-card">
+      <StatLabel label={label} tip={tip} />
+      <div className="value" style={{ fontSize: 22 }}>
+        {value}
+      </div>
+      {hint ? <div className="hint">{hint}</div> : null}
+    </div>
+  )
+}
 
 type TradeFilters = {
   kw: string
@@ -70,7 +116,6 @@ function exportTradesCsv(rows: TradeRecord[]) {
     '包装费',
     '骑手配送费',
     '状态',
-    '备注',
   ]
   const lines = rows.map((t) =>
     [
@@ -88,7 +133,6 @@ function exportTradesCsv(rows: TradeRecord[]) {
       t.packingFee.toFixed(2),
       t.deliveryFee.toFixed(2),
       tradeStatusLabel(t.status),
-      t.remark,
     ]
       .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
       .join(','),
@@ -106,12 +150,31 @@ function exportTradesCsv(rows: TradeRecord[]) {
 
 export function TradeFlowPage() {
   const { trades, merchants, notify } = useAdmin()
-  const stores = merchants.filter((m) => m.status === 'approved')
+  /** 与门店管理一致：流水挂在分店，筛选列表不含总店 */
+  const stores = useMemo(
+    () => merchants.filter((m) => m.status === 'approved' && m.type === 'branch'),
+    [merchants],
+  )
   const [draft, setDraft] = useState<TradeFilters>(emptyFilters)
   const [applied, setApplied] = useState<TradeFilters>(emptyFilters)
   const [current, setCurrent] = useState<TradeRecord | null>(null)
+  const [page, setPage] = useState(1)
 
   const list = useMemo(() => matchTrades(trades, applied), [trades, applied])
+
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+  const pageList = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return list.slice(start, start + PAGE_SIZE)
+  }, [list, page])
+
+  useEffect(() => {
+    setPage(1)
+  }, [applied])
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   const successPay = useMemo(
     () => list.filter((t) => t.type === 'pay' && t.status === 'success'),
@@ -157,7 +220,7 @@ export function TradeFlowPage() {
     <>
       <PageHeader
         title="交易流水"
-        desc="按筛选结果汇总餐品、包装费、骑手配送费，便于周期性结算与对账导出。"
+        desc="按当前筛选汇总；除「当前笔数」外，金额类指标仅统计状态为「成功」的流水，失败流水不计入金额汇总。"
         extra={
           <button className="btn" type="button" onClick={exportCsv}>
             导出
@@ -165,55 +228,40 @@ export function TradeFlowPage() {
         }
       />
       <div className="stat-grid trade-stat-grid" style={{ marginBottom: 16 }}>
-        <div className="stat-card">
-          <div className="label">当前笔数</div>
-          <div className="value">{list.length}</div>
-        </div>
-        <div className="stat-card">
-          <div className="label">成功支付</div>
-          <div className="value" style={{ fontSize: 22 }}>
-            {money(paySum)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="label">成功退款</div>
-          <div className="value" style={{ fontSize: 22 }}>
-            {money(refundSum)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="label">净流入</div>
-          <div className="value" style={{ fontSize: 22 }}>
-            {money(paySum - refundSum)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="label">餐品净额</div>
-          <div className="value" style={{ fontSize: 22 }}>
-            {money(mealPay - mealRefund)}
-          </div>
-          <div className="hint">
-            收 {money(mealPay)} · 退 {money(mealRefund)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="label">包装费净额</div>
-          <div className="value" style={{ fontSize: 22 }}>
-            {money(packPay - packRefund)}
-          </div>
-          <div className="hint">
-            收 {money(packPay)} · 退 {money(packRefund)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="label">骑手配送费净额</div>
-          <div className="value" style={{ fontSize: 22 }}>
-            {money(deliveryPay - deliveryRefund)}
-          </div>
-          <div className="hint">
-            收 {money(deliveryPay)} · 退 {money(deliveryRefund)}
-          </div>
-        </div>
+        <StatCard label="当前笔数" tip={STAT_TIPS.count} value={list.length} />
+        <StatCard label="成功支付" tip={STAT_TIPS.pay} value={money(paySum)} />
+        <StatCard label="成功退款" tip={STAT_TIPS.refund} value={money(refundSum)} />
+        <StatCard label="净流入" tip={STAT_TIPS.net} value={money(paySum - refundSum)} />
+        <StatCard
+          label="餐品净额"
+          tip={STAT_TIPS.meal}
+          value={money(mealPay - mealRefund)}
+          hint={
+            <>
+              收 {money(mealPay)} · 退 {money(mealRefund)}
+            </>
+          }
+        />
+        <StatCard
+          label="包装费净额"
+          tip={STAT_TIPS.packing}
+          value={money(packPay - packRefund)}
+          hint={
+            <>
+              收 {money(packPay)} · 退 {money(packRefund)}
+            </>
+          }
+        />
+        <StatCard
+          label="骑手配送费净额"
+          tip={STAT_TIPS.delivery}
+          value={money(deliveryPay - deliveryRefund)}
+          hint={
+            <>
+              收 {money(deliveryPay)} · 退 {money(deliveryRefund)}
+            </>
+          }
+        />
       </div>
       <Panel>
         <Toolbar>
@@ -227,7 +275,7 @@ export function TradeFlowPage() {
           </select>
           <select value={draft.channel} onChange={(e) => setDraftField('channel', e.target.value)}>
             <option value="all">全部渠道</option>
-            <option value="wechat">微信支付</option>
+            <option value="wechat">微信</option>
             <option value="alipay">支付宝</option>
           </select>
           <select value={draft.type} onChange={(e) => setDraftField('type', e.target.value)}>
@@ -238,7 +286,6 @@ export function TradeFlowPage() {
           <select value={draft.status} onChange={(e) => setDraftField('status', e.target.value)}>
             <option value="all">全部状态</option>
             <option value="success">成功</option>
-            <option value="processing">处理中</option>
             <option value="failed">失败</option>
           </select>
           <input
@@ -277,8 +324,28 @@ export function TradeFlowPage() {
             <thead>
               <tr>
                 <th>交易时间</th>
-                <th>流水号</th>
-                <th>订单号</th>
+                <th>
+                  流水号
+                  <i
+                    className="tip-icon"
+                    tabIndex={0}
+                    data-tip={TRADE_NO_TIP}
+                    aria-label="流水号规则说明"
+                  >
+                    ?
+                  </i>
+                </th>
+                <th>
+                  订单号
+                  <i
+                    className="tip-icon"
+                    tabIndex={0}
+                    data-tip={ORDER_ID_TIP}
+                    aria-label="订单号规则说明"
+                  >
+                    ?
+                  </i>
+                </th>
                 <th>门店</th>
                 <th>类型</th>
                 <th>渠道</th>
@@ -291,17 +358,12 @@ export function TradeFlowPage() {
               </tr>
             </thead>
             <tbody>
-              {list.map((t) => (
+              {pageList.map((t) => (
                 <tr key={t.id}>
                   <td>{t.createdAt}</td>
                   <td>{t.tradeNo}</td>
                   <td>{t.orderId}</td>
-                  <td>
-                    {t.storeName}
-                    <span className="sub">
-                      {t.user} {t.phone}
-                    </span>
-                  </td>
+                  <td>{t.storeName}</td>
                   <td>
                     <StatusTag tone={t.type === 'pay' ? 'info' : 'warning'}>
                       {tradeTypeLabel(t.type)}
@@ -315,11 +377,7 @@ export function TradeFlowPage() {
                     <b>{money(t.amount)}</b>
                   </td>
                   <td>
-                    <StatusTag
-                      tone={
-                        t.status === 'success' ? 'success' : t.status === 'failed' ? 'danger' : 'warning'
-                      }
-                    >
+                    <StatusTag tone={t.status === 'success' ? 'success' : 'danger'}>
                       {tradeStatusLabel(t.status)}
                     </StatusTag>
                   </td>
@@ -341,7 +399,32 @@ export function TradeFlowPage() {
           </table>
         </div>
         <div className="pagination">
-          共 {list.length} 条 · 按当前筛选汇总（仅统计成功状态的支付/退款）
+          <span>
+            共 {list.length} 条 · 每页 {PAGE_SIZE} 条
+            {list.length ? ` · 第 ${page}/${totalPages} 页` : ''}
+          </span>
+          <div className="pagination-btns">
+            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              上一页
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={n === page ? 'on' : ''}
+                onClick={() => setPage(n)}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={page >= totalPages || !list.length}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              下一页
+            </button>
+          </div>
         </div>
       </Panel>
 
@@ -359,8 +442,26 @@ export function TradeFlowPage() {
         {current ? (
           <DescList
             items={[
-              { label: '流水号', value: current.tradeNo },
-              { label: '订单号', value: current.orderId },
+              {
+                key: 'tradeNo',
+                label: (
+                  <>
+                    流水号
+                    <FloatTip label="流水号规则说明" text={TRADE_NO_TIP} />
+                  </>
+                ),
+                value: current.tradeNo,
+              },
+              {
+                key: 'orderId',
+                label: (
+                  <>
+                    订单号
+                    <FloatTip label="订单号规则说明" text={ORDER_ID_TIP} />
+                  </>
+                ),
+                value: current.orderId,
+              },
               { label: '第三方单号', value: current.thirdPartyNo },
               { label: '门店', value: current.storeName },
               { label: '用户', value: `${current.user} ${current.phone}` },
@@ -372,7 +473,6 @@ export function TradeFlowPage() {
               { label: '骑手配送费', value: money(current.deliveryFee) },
               { label: '状态', value: tradeStatusLabel(current.status) },
               { label: '时间', value: current.createdAt },
-              { label: '备注', value: current.remark },
             ]}
           />
         ) : null}

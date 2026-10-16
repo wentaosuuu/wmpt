@@ -21,6 +21,7 @@ import {
   findUnavailableCartItems,
   minimumOrderShortfall,
   nextOrderId,
+  nextTradeNo,
   nowLabel,
 } from '../lib/utils'
 import type { Address, AppRole, CartItem, Order, OrderStatus, PayChannel, TicketType, User } from '../types'
@@ -58,7 +59,7 @@ type AppContextValue = {
   createOrder: (address: Address, remark: string) => Order | null
   payOrder: (id: string, channel: PayChannel) => void
   cancelOrder: (id: string, reason: string) => void
-  applyRefund: (id: string, reason: string) => void
+  applyRefund: (id: string, reason: string, remark?: string) => void
   addTicket: (orderId: string | undefined, content: string, type: TicketType) => void
   /** 商家：接单 */
   merchantAccept: (id: string) => void
@@ -66,8 +67,6 @@ type AppContextValue = {
   merchantReject: (id: string, reason: string) => void
   /** 商家：出餐完成 */
   merchantReady: (id: string) => void
-  /** 商家：核对交餐给骑手 */
-  merchantHandover: (id: string) => void
   /** 商家：同意退款 */
   merchantRefundApprove: (id: string) => void
   /** 商家：驳回退款 */
@@ -98,14 +97,15 @@ function patchOrder(
   }
 }
 
-/** 生成三位取餐号（100-999），避免与现有订单重复 */
-function nextPickupNo(orders: Order[]) {
-  const used = new Set(orders.map((o) => o.pickupNo).filter(Boolean))
-  for (let i = 0; i < 80; i++) {
-    const no = String(100 + Math.floor(Math.random() * 900))
-    if (!used.has(no)) return no
-  }
-  return String(100 + (Date.now() % 900))
+/** 按门店出餐先后生成 001–999 的三位取餐号，满号后从 001 循环 */
+function nextPickupNo(orders: Order[], storeId: string) {
+  const nums = orders
+    .filter((o) => o.storeId === storeId)
+    .map((o) => Number.parseInt(o.pickupNo || '', 10))
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 999)
+  const max = nums.length ? Math.max(...nums) : 0
+  const next = max >= 999 ? 1 : max + 1
+  return String(next).padStart(3, '0')
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -279,7 +279,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const createdAt = nowLabel()
       const order: Order = {
-        id: nextOrderId(),
+        id: nextOrderId(orders.map((o) => o.id)),
         storeId: totals.store.id,
         storeName: totals.store.name,
         items: cart.map((i) => ({
@@ -307,15 +307,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCart([])
       return order
     },
-    [cart, toast],
+    [cart, orders, toast],
   )
 
   const payOrder = useCallback((id: string, channel: PayChannel) => {
-    setOrders((prev) =>
-      prev.map((o) => {
+    setOrders((prev) => {
+      const existingTradeNos = prev.flatMap((o) => [o.tradeNo, o.refundTradeNo].filter(Boolean) as string[])
+      return prev.map((o) => {
         if (o.id !== id || o.status !== 'pending_pay' || minimumOrderShortfall(o.storeId, o.dishAmount) !== 0) {
           return o
         }
+        const tradeNo = nextTradeNo(existingTradeNos)
         return patchOrder(
           o,
           'pending_accept',
@@ -323,10 +325,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             title: '支付成功',
             desc: `${channel === 'wechat' ? '微信' : '支付宝'}支付 ${o.payable.toFixed(2)} 元`,
           },
-          { payChannel: channel },
+          { payChannel: channel, tradeNo },
         )
-      }),
-    )
+      })
+    })
   }, [])
 
   const cancelOrder = useCallback(
@@ -355,7 +357,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const applyRefund = useCallback(
-    (id: string, reason: string) => {
+    (id: string, reason: string, remark = '') => {
       setOrders((prev) => {
         const target = prev.find((o) => o.id === id)
         const canReapply = target?.refund?.status === 'rejected'
@@ -364,6 +366,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return prev
         }
         const midWay = ['ready', 'picked', 'delivering'].includes(target.status)
+        const note = remark.trim()
         return prev.map((o) =>
           o.id === id
             ? patchOrder(
@@ -371,7 +374,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 'refunding',
                 {
                   title: midWay ? '已申请取消' : '已申请退款',
-                  desc: `${reason}，全额退款 ¥${o.payable.toFixed(2)}，待商家审核`,
+                  desc: `${reason}，全额退款 ¥${o.payable.toFixed(2)}，待商家审核${note ? `。备注：${note}` : ''}`,
                 },
                 {
                   statusBeforeRefund: o.status,
@@ -379,6 +382,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     id: `R${Date.now()}`,
                     amount: o.payable,
                     reason,
+                    remark: note,
                     status: 'pending',
                     expected: o.payable,
                     createdAt: nowLabel(),
@@ -401,11 +405,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: ticketId,
         type,
         user: user?.name || '消费者',
+        phone: user?.phone || '',
         content: orderId ? `【订单 ${orderId}】${content}` : content,
         status: 'open',
         handler: '-',
         result: '',
         createdAt: stamp,
+        repliedAt: '',
         orderId,
       })
       if (orderId) {
@@ -467,7 +473,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       let pickupNo = ''
       setOrders((prev) => {
-        pickupNo = nextPickupNo(prev)
+        const target = prev.find((o) => o.id === id)
+        pickupNo = target?.pickupNo || nextPickupNo(prev, target?.storeId || '')
         return prev.map((o) =>
           o.id === id
             ? patchOrder(
@@ -486,9 +493,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const merchantRefundApprove = useCallback(
     (id: string) => {
-      setOrders((prev) =>
-        prev.map((o) => {
+      setOrders((prev) => {
+        const existingTradeNos = prev.flatMap((o) => [o.tradeNo, o.refundTradeNo].filter(Boolean) as string[])
+        return prev.map((o) => {
           if (o.id !== id || o.status !== 'refunding' || !o.refund) return o
+          const refundTradeNo = nextTradeNo(existingTradeNos)
           return patchOrder(
             o,
             'refunded',
@@ -498,12 +507,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
             },
             {
               refund: { ...o.refund, status: 'returned' },
+              refundTradeNo,
               statusBeforeRefund: undefined,
               rider: o.rider ? { ...o.rider, location: '订单已退款取消' } : o.rider,
             },
           )
-        }),
-      )
+        })
+      })
       toast('已同意退款，款项将原路退回用户')
     },
     [toast],
@@ -527,28 +537,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }),
       )
       toast('已驳回退款申请')
-    },
-    [toast],
-  )
-
-  const merchantHandover = useCallback(
-    (id: string) => {
-      setOrders((prev) => {
-        const target = prev.find((o) => o.id === id)
-        if (!target?.rider) {
-          toast('请等待骑手接单到店后再交餐')
-          return prev
-        }
-        toast('交餐完成')
-        return prev.map((o) =>
-          o.id === id
-            ? patchOrder(o, 'picked', {
-                title: '商家已交餐',
-                desc: `已核对订单并交给骑手 ${o.rider?.name}`,
-              })
-            : o,
-        )
-      })
     },
     [toast],
   )
@@ -685,7 +673,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       merchantAccept,
       merchantReject,
       merchantReady,
-      merchantHandover,
       merchantRefundApprove,
       merchantRefundReject,
       riderClaim,
@@ -723,7 +710,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       merchantAccept,
       merchantReject,
       merchantReady,
-      merchantHandover,
       merchantRefundApprove,
       merchantRefundReject,
       riderClaim,

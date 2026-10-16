@@ -83,21 +83,12 @@ export function MoneyRow({ label, value, strong }: { label: string; value: strin
   )
 }
 
-/** 三端统一：订单编号展示 */
-export function OrderNo({
-  id,
-  short = false,
-  className = '',
-}: {
-  id: string
-  /** 卡片场景可只展示后 6 位 */
-  short?: boolean
-  className?: string
-}) {
+/** 三端统一：完整订单号（WMPT + 日期 + 6 位序号） */
+export function OrderNo({ id, className = '' }: { id: string; className?: string }) {
   return (
     <div className={`order-no${className ? ` ${className}` : ''}`}>
       <span>订单编号</span>
-      <strong>{short ? id.slice(-6) : id}</strong>
+      <strong>{id}</strong>
     </div>
   )
 }

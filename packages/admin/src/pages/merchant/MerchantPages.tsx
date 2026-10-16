@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
+import { MapLocationPicker } from '../../components/MapLocationPicker'
+import {
+  DescList,
+  Field,
+  FloatTip,
+  Modal,
+  PageHeader,
+  Panel,
+  StatusTag,
+  Toolbar,
+} from '../../components/ui'
 import {
   districtsOf,
   formatRegionPath,
@@ -94,7 +104,7 @@ export function StoreApplyPage() {
     setOpen(true)
   }
 
-  // 从门店管理「添加分店」带 ?hq= 跳转时预填总店并打开表单
+  // 支持带 ?hq= 跳转时预填总店并打开分店入驻表单
   useEffect(() => {
     const hqId = searchParams.get('hq')
     if (!hqId || !hqOptions.length) return
@@ -136,7 +146,7 @@ export function StoreApplyPage() {
       <Panel>
         <Toolbar>
           <input
-            placeholder="申请单号 / 门店 / 总店 / 联系人 / 执照号"
+            placeholder="申请单号 / 门店 / 总店 / 联系人 / 营业执照号"
             value={kw}
             onChange={(e) => setKw(e.target.value)}
           />
@@ -223,8 +233,8 @@ export function StoreApplyPage() {
                 ) {
                   notify(
                     form.applyType === 'branch'
-                      ? '请完整填写分店、所属总店、联系人、电话、门店地址和执照号'
-                      : '请完整填写总店名称、联系人、电话、地址和执照号',
+                      ? '请完整填写分店、所属总店、联系人、电话、门店地址和营业执照号'
+                      : '请完整填写总店名称、联系人、电话、地址和营业执照号',
                   )
                   return
                 }
@@ -298,68 +308,87 @@ export function StoreApplyPage() {
           </Field>
         </div>
 
-        <div className="form-grid" style={{ marginTop: 12 }}>
-          <Field label="门店地址 · 市">
-            <select
-              value={form.city}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  city: e.target.value,
-                  district: '',
-                  street: '',
-                })
-              }
-            >
-              <option value="">请选择市</option>
-              {regionTree.map((c) => (
-                <option key={c.label} value={c.label}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="门店地址 · 区">
-            <select
-              value={form.district}
-              disabled={!form.city}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  district: e.target.value,
-                  street: '',
-                })
-              }
-            >
-              <option value="">请选择区</option>
-              {districtsOf(form.city).map((d) => (
-                <option key={d.label} value={d.label}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="门店地址 · 街道">
-            <select
-              value={form.street}
-              disabled={!form.district}
-              onChange={(e) => setForm({ ...form, street: e.target.value })}
-            >
-              <option value="">请选择街道</option>
-              {streetsOf(form.city, form.district).map((s) => (
-                <option key={s.label} value={s.label}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="详细地址">
-            <input
-              value={form.addressDetail}
-              placeholder="如楼栋、门牌、档口号等"
-              onChange={(e) => setForm({ ...form, addressDetail: e.target.value })}
-            />
-          </Field>
+        <div className="address-block" style={{ marginTop: 12 }}>
+          <MapLocationPicker
+            value={{
+              city: form.city,
+              district: form.district,
+              street: form.street,
+              addressDetail: form.addressDetail,
+            }}
+            onChange={(next) =>
+              setForm({
+                ...form,
+                city: next.city,
+                district: next.district,
+                street: next.street,
+                addressDetail: next.addressDetail ?? form.addressDetail,
+              })
+            }
+          />
+          <div className="form-grid" style={{ marginTop: 12 }}>
+            <Field label="门店所在市">
+              <select
+                value={form.city}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    city: e.target.value,
+                    district: '',
+                    street: '',
+                  })
+                }
+              >
+                <option value="">请选择市</option>
+                {regionTree.map((c) => (
+                  <option key={c.label} value={c.label}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="门店所在区">
+              <select
+                value={form.district}
+                disabled={!form.city}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    district: e.target.value,
+                    street: '',
+                  })
+                }
+              >
+                <option value="">请选择区</option>
+                {districtsOf(form.city).map((d) => (
+                  <option key={d.label} value={d.label}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="门店所在街道">
+              <select
+                value={form.street}
+                disabled={!form.district}
+                onChange={(e) => setForm({ ...form, street: e.target.value })}
+              >
+                <option value="">请选择街道</option>
+                {streetsOf(form.city, form.district).map((s) => (
+                  <option key={s.label} value={s.label}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="详细地址">
+              <input
+                value={form.addressDetail}
+                placeholder="如楼栋、门牌、档口号等"
+                onChange={(e) => setForm({ ...form, addressDetail: e.target.value })}
+              />
+            </Field>
+          </div>
         </div>
 
         <div className="attach-section">
@@ -449,7 +478,7 @@ export function StoreAuditPage() {
     <>
       <PageHeader
         title="入驻审核"
-        desc="审核总店 / 分店入驻与资质附件。通过后生成对应档案，再到门店管理开通外卖与上架。"
+        desc="审核总店 / 分店入驻与资质附件。通过后生成对应档案，再到门店管理上架。"
       />
       <Panel>
         <Toolbar>
@@ -460,7 +489,7 @@ export function StoreAuditPage() {
             <option value="all">全部</option>
           </select>
           <input
-            placeholder="申请单号 / 门店 / 总店 / 联系人 / 执照号"
+            placeholder="申请单号 / 门店 / 总店 / 联系人 / 营业执照号"
             value={kw}
             onChange={(e) => setKw(e.target.value)}
           />
@@ -473,7 +502,7 @@ export function StoreAuditPage() {
                 <th>类型</th>
                 <th>门店</th>
                 <th>所属总店</th>
-                <th>执照</th>
+                <th>营业执照号</th>
                 <th>联系人</th>
                 <th>提交时间</th>
                 <th>状态</th>
@@ -591,7 +620,7 @@ export function StoreAuditPage() {
                       .join(' '),
                 },
                 { label: '联系人', value: `${current.contact} ${current.phone}` },
-                { label: '执照', value: current.license },
+                { label: '营业执照号', value: current.license },
                 { label: '营业时间', value: current.hours },
                 { label: '审核意见', value: current.auditRemark || '-' },
               ]}
@@ -657,12 +686,12 @@ export function StoreAuditPage() {
         <DescList
           items={[
             { label: '门店', value: current?.name },
-            { label: '营业执照', value: current?.license },
+            { label: '营业执照号', value: current?.license },
           ]}
         />
         {mode === 'approve' ? (
           <p style={{ fontSize: 13, color: '#86909c' }}>
-            通过即完成入驻与资质审核：按申请类型创建总店或分店档案、资质记为有效、外卖默认关闭且未上架。后续在「门店管理」开通外卖，并用上架开关控制用户端可见。
+            通过即完成入驻与资质审核：按申请类型创建总店或分店档案、资质记为有效且未上架。后续在「门店管理」用上架开关控制用户端可见。
           </p>
         ) : null}
         <Field label="审核意见">
@@ -674,16 +703,29 @@ export function StoreAuditPage() {
 }
 
 export function StoresPage() {
-  const { merchants, merchantChangeLogs, cuisineCategories, updateMerchant, saveMerchant, notify } =
-    useAdmin()
+  const {
+    merchants,
+    merchantChangeLogs,
+    cuisineCategories,
+    coverages,
+    updateMerchant,
+    saveMerchant,
+    saveCoverage,
+    notify,
+  } = useAdmin()
   const [kw, setKw] = useState('')
   const [levelFilter, setLevelFilter] = useState<'all' | 'hq' | 'branch'>('all')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [current, setCurrent] = useState<Merchant | null>(null)
-  const [mode, setMode] = useState<'view' | 'toggle' | 'edit' | 'remind' | 'changelog' | null>(null)
+  const [mode, setMode] = useState<'view' | 'edit' | 'remind' | 'changelog' | null>(null)
   const [form, setForm] = useState<Merchant | null>(null)
   const [editStart, setEditStart] = useState('10:00')
   const [editEnd, setEditEnd] = useState('20:00')
+  const [editRadiusKm, setEditRadiusKm] = useState('3')
+
+  function radiusOf(storeId: string) {
+    return coverages.find((c) => c.storeId === storeId)?.radiusKm
+  }
 
   const approved = useMemo(
     () => merchants.filter((m) => m.status === 'approved'),
@@ -773,7 +815,6 @@ export function StoresPage() {
               <tr>
                 <th>名称</th>
                 <th>层级</th>
-                <th>外卖能力</th>
                 <th>移动端上架</th>
                 <th>营业时间</th>
                 <th>保证金</th>
@@ -829,30 +870,15 @@ export function StoresPage() {
                       </StatusTag>
                     </td>
                     <td>
-                      <StatusTag tone={m.takeout ? 'success' : 'default'}>
-                        {m.takeout ? '已开通' : '未开通'}
-                      </StatusTag>
-                    </td>
-                    <td>
                       <button
                         type="button"
                         className={`switch${m.frontListed ? ' on' : ''}`}
-                        disabled={!m.takeout && !m.frontListed}
-                        title={
-                          !m.takeout && !m.frontListed
-                            ? '请先开通外卖后再上架'
-                            : m.frontListed
-                              ? '已上架，点击下架'
-                              : '未上架，点击上架'
-                        }
+                        title={m.frontListed ? '已上架，点击下架' : '未上架，点击上架'}
                         aria-label={m.frontListed ? '下架' : '上架'}
                         onClick={() => {
-                          if (!m.frontListed && !m.takeout) {
-                            notify('请先开通外卖，再上架到移动端')
-                            return
-                          }
-                          updateMerchant(m.id, { frontListed: !m.frontListed })
-                          notify(m.frontListed ? '已从移动端下架' : '已上架，用户端可见该门店')
+                          const next = !m.frontListed
+                          updateMerchant(m.id, { frontListed: next, takeout: next })
+                          notify(next ? '已上架，用户端可见该门店' : '已从移动端下架')
                         }}
                       >
                         <span className="switch-knob" />
@@ -901,25 +927,11 @@ export function StoresPage() {
                           const h = splitHours(m.hours)
                           setEditStart(h.start)
                           setEditEnd(h.end)
+                          setEditRadiusKm(String(radiusOf(m.id) ?? 3))
                           setMode('edit')
                         }}
                       >
                         编辑
-                      </button>
-                      {isHq ? (
-                        <Link className="link-btn" to={`/merchants/apply?hq=${m.id}`}>
-                          添加分店
-                        </Link>
-                      ) : null}
-                      <button
-                        className="link-btn"
-                        type="button"
-                        onClick={() => {
-                          setCurrent(m)
-                          setMode('toggle')
-                        }}
-                      >
-                        {m.takeout ? '关闭外卖' : '开通外卖'}
                       </button>
                       {m.qualStatus === 'expiring' ? (
                         <button
@@ -949,7 +961,7 @@ export function StoresPage() {
               })}
               {!treeRows.length ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={7}>
                     <div className="empty-block">暂无门店</div>
                   </td>
                 </tr>
@@ -958,11 +970,9 @@ export function StoresPage() {
           </table>
         </div>
         <p style={{ marginTop: 12, fontSize: 13, color: '#86909c' }}>
-          说明：总店与分店均可开通外卖并上架；新建分店须在
+          说明：打开「移动端上架」后用户端可见并可下单；新建总店 / 分店须在
           <Link to="/merchants/apply"> 门店入驻 </Link>
-          提交材料并由管理员审核。配送半径在
-          <Link to="/delivery/coverage"> 覆盖区域 </Link>
-          按门店配置。
+          提交材料并由管理员审核。总店与分店均可上架外卖，配送半径在编辑门店时配置，以门店地址为圆心、半径内均可配送。
         </p>
       </Panel>
 
@@ -987,7 +997,7 @@ export function StoresPage() {
                 { label: '取餐点', value: current.pickup },
                 { label: '联系人', value: `${current.contact} ${current.phone}` },
                 { label: '营业时间', value: current.hours },
-                { label: '执照', value: current.license },
+                { label: '营业执照号', value: current.license },
                 { label: '资质到期', value: current.expireAt },
                 { label: '保证金', value: `¥${(current.deposit || 0).toLocaleString('zh-CN')}` },
                 {
@@ -998,14 +1008,17 @@ export function StoresPage() {
                   })}`,
                 },
                 {
-                  label: '配送费',
+                  label: '预估配送费',
                   value: `¥${(current.deliveryFee || 0).toLocaleString('zh-CN', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}`,
                 },
+                {
+                  label: '配送半径',
+                  value: `${radiusOf(current.id) ?? 3} 公里`,
+                },
                 { label: '经营品类', value: current.cuisine || '-' },
-                { label: '外卖能力', value: current.takeout ? '已开通' : '未开通' },
                 { label: '移动端上架', value: current.frontListed ? '已上架' : '未上架' },
               ]}
             />
@@ -1050,6 +1063,12 @@ export function StoresPage() {
                   notify('请输入有效的起送费')
                   return
                 }
+                const radiusKmRaw = Number(editRadiusKm)
+                if (!Number.isFinite(radiusKmRaw) || radiusKmRaw <= 0) {
+                  notify('请输入大于 0 的配送半径')
+                  return
+                }
+                const radiusKm = Math.round(radiusKmRaw * 10) / 10
                 let parentName = form.parentName
                 let parentId = form.parentId
                 if (form.type === 'branch' && form.parentId) {
@@ -1064,6 +1083,12 @@ export function StoresPage() {
                   deposit: Math.round(deposit),
                   minOrder: Math.round(minOrder * 100) / 100,
                   hours: joinHours(editStart, editEnd),
+                })
+                saveCoverage({
+                  storeId: form.id,
+                  storeName: form.name,
+                  radiusKm,
+                  enabled: true,
                 })
                 notify('门店信息已保存')
                 setMode(null)
@@ -1157,13 +1182,43 @@ export function StoresPage() {
                 消费者餐品金额未达起送费时不可下单（不含配送费、包装费）
               </p>
             </Field>
-            <Field label="配送费（元）">
+            <Field
+              label={
+                <>
+                  预估配送费（元）
+                  <FloatTip
+                    label="预估配送费说明"
+                    text="预估配送费由商家做初始化预估；实际配送费会根据峰谷时段、天气情况做动态调整，以订单结算页面为准。"
+                  />
+                </>
+              }
+            >
               <input
                 type="number"
                 min={0}
                 step={1}
                 value={form.deliveryFee}
                 onChange={(e) => setForm({ ...form, deliveryFee: Number(e.target.value) })}
+              />
+            </Field>
+            <Field
+              label={
+                <>
+                  配送半径（公里）
+                  <FloatTip
+                    label="配送半径说明"
+                    text="以门店地址为圆心配置配送半径，半径范围内的收货地址均可配送。总店上架外卖时同样生效。"
+                  />
+                </>
+              }
+            >
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={editRadiusKm}
+                onChange={(e) => setEditRadiusKm(e.target.value)}
+                placeholder="例如 3"
               />
             </Field>
             <Field label="经营品类">
@@ -1243,53 +1298,6 @@ export function StoresPage() {
       </Modal>
 
       <Modal
-        open={mode === 'toggle' && !!current}
-        title={current?.takeout ? '关闭外卖服务' : '开通外卖服务'}
-        onClose={() => setMode(null)}
-        footer={
-          <>
-            <button className="btn ghost" type="button" onClick={() => setMode(null)}>
-              取消
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                if (!current) return
-                if (
-                  !current.takeout &&
-                  current.qualStatus !== 'valid' &&
-                  current.qualStatus !== 'expiring'
-                ) {
-                  notify('门店资质无效，无法开通外卖')
-                  return
-                }
-                const next = !current.takeout
-                updateMerchant(current.id, {
-                  takeout: next,
-                  ...(next ? {} : { frontListed: false }),
-                })
-                notify(
-                  next
-                    ? '已开通外卖能力，可在列表中打开「移动端上架」开关对用户可见'
-                    : '已关闭外卖，并已从移动端下架',
-                )
-                setMode(null)
-              }}
-            >
-              确认
-            </button>
-          </>
-        }
-      >
-        <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
-          {current?.takeout
-            ? `确认关闭「${current?.name}」外卖能力？将同时从移动端下架。`
-            : `确认开通「${current?.name}」外卖能力？开通后可在列表中打开上架开关，用户才能下单。`}
-        </p>
-      </Modal>
-
-      <Modal
         open={mode === 'remind' && !!current}
         title="发送到期提醒"
         onClose={() => setMode(null)}
@@ -1313,7 +1321,7 @@ export function StoresPage() {
       >
         <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
           将提醒「{current?.name}」联系人 {current?.contact}，资质将于 {current?.expireAt}{' '}
-          到期。可在编辑中更新执照与到期日。
+          到期。可在编辑中更新营业执照号与到期日。
         </p>
       </Modal>
 

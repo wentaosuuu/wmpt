@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 export function PageHeader({
   title,
@@ -82,24 +83,85 @@ export function Empty({ text = '暂无数据' }: { text?: string }) {
 
 export function Field({
   label,
+  required,
   children,
 }: {
-  label: string
+  label: ReactNode
+  required?: boolean
   children: ReactNode
 }) {
   return (
     <div className="form-field">
-      <label>{label}</label>
+      <label>
+        {label}
+        {required ? <span className="req-mark" aria-hidden="true">*</span> : null}
+      </label>
       {children}
     </div>
   )
 }
 
-export function DescList({ items }: { items: { label: string; value: ReactNode }[] }) {
+/** 问号悬浮说明：挂到 body，不挤占表单布局，也不被弹窗 overflow 裁切 */
+export function FloatTip({ text, label = '说明' }: { text: string; label?: string }) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0, place: 'bottom' as 'top' | 'bottom' })
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return
+    const r = triggerRef.current.getBoundingClientRect()
+    const gap = 8
+    const tipWidth = 280
+    const tipApproxH = 72
+    const place = r.bottom + gap + tipApproxH > window.innerHeight - 12 ? 'top' : 'bottom'
+    const top = place === 'bottom' ? r.bottom + gap : r.top - gap
+    let left = r.left + r.width / 2
+    left = Math.min(Math.max(left, tipWidth / 2 + 12), window.innerWidth - tipWidth / 2 - 12)
+    setPos({ top, left, place })
+  }, [open])
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="tip-icon tip-icon-btn"
+        aria-label={label}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+      >
+        ?
+      </button>
+      {open
+        ? createPortal(
+            <div
+              className={`float-tip-bubble ${pos.place}`}
+              style={{ top: pos.top, left: pos.left }}
+              role="tooltip"
+            >
+              {text}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  )
+}
+
+export function DescList({
+  items,
+}: {
+  items: { label: ReactNode; value: ReactNode; key?: string }[]
+}) {
   return (
     <dl className="desc-list">
-      {items.map((item) => (
-        <div key={item.label} className="desc-item">
+      {items.map((item, index) => (
+        <div
+          key={item.key ?? (typeof item.label === 'string' ? item.label : String(index))}
+          className="desc-item"
+        >
           <dt>{item.label}</dt>
           <dd>{item.value}</dd>
         </div>
