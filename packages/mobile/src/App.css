@@ -81,6 +81,117 @@
   font-weight: 600;
 }
 
+.orders-title-bar {
+  position: relative;
+}
+
+.orders-guide-btn {
+  border: 0;
+  background: transparent;
+  color: #1677ff;
+  font-size: 13px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.orders-title-bar .orders-guide-btn {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.order-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.order-status-hint {
+  margin: 8px 0 0;
+  color: #86909c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.status-rail {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.status-rail li {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f2f3f5;
+  color: #86909c;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.status-rail li.done {
+  background: #e8f3ff;
+  color: #4e5969;
+}
+
+.status-rail li.on {
+  background: #1677ff;
+  color: #fff;
+  font-weight: 600;
+}
+
+.status-guide-sheet {
+  max-height: min(86vh, 720px);
+  display: flex;
+  flex-direction: column;
+}
+
+.status-guide-lead {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.status-guide-scroll {
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+.status-guide-scroll h4 {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.status-guide-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-guide-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.status-guide-list strong {
+  display: block;
+  font-size: 14px;
+}
+
+.status-guide-list span {
+  display: block;
+  margin-top: 4px;
+  color: #86909c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Home */
 .home-page {
   padding-bottom: 16px;
@@ -681,8 +792,22 @@ img.store-hero-logo {
   padding-bottom: 12px;
 }
 
+.spec-group-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.spec-group-hint {
+  font-size: 12px;
+  color: #86909c;
+  flex-shrink: 0;
+}
+
 .dish-option-card h4 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 14px;
 }
 
@@ -2009,6 +2134,14 @@ img.store-mini-logo {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.role-stats.cols-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.role-stats.cols-5 span {
+  font-size: 10px;
+}
+
 .role-page .role-stats:has(> :nth-child(3):last-child) {
   grid-template-columns: repeat(3, 1fr);
 }
@@ -2036,9 +2169,17 @@ img.store-mini-logo {
   color: #86909c;
 }
 
+.seg.underline.merchant-order-tabs,
 .seg.underline.rider-tabs {
   overflow-x: auto;
   padding: 0 2px;
+}
+
+.seg.underline.merchant-order-tabs button {
+  flex: 1 0 auto;
+  padding: 12px 8px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .seg.underline.rider-tabs button {
@@ -2345,7 +2486,7 @@ img.store-mini-logo {
   line-height: 1.4;
 }
 
-/* 取餐号：商家出餐后生成，骑手到店凭号取餐 */
+/* 取餐号：骑手抢单后生成，到店凭号取餐 */
 .pickup-no-banner {
   margin-top: 12px;
   padding: 12px 14px;

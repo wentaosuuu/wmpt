@@ -16,11 +16,16 @@ const tabs = [
   { id: 'pending_accept', label: '待接单' },
   { id: 'preparing', label: '备餐中' },
   { id: 'ready', label: '待取餐' },
+  { id: 'delivering', label: '配送中' },
   { id: 'refunding', label: '退款' },
   { id: 'done', label: '已完成' },
 ] as const
 
 type TabId = (typeof tabs)[number]['id']
+
+/** 骑手已取餐后至送达前，商家侧统一归入「配送中」 */
+const deliveringStatuses = ['picked', 'delivering'] as const
+const doneStatuses = ['delivered', 'rejected', 'cancelled', 'refunded'] as const
 
 function isTabId(v: string | null): v is TabId {
   return tabs.some((t) => t.id === v)
@@ -59,6 +64,7 @@ export function MerchantOrdersPage() {
       pending_accept: 0,
       preparing: 0,
       ready: 0,
+      delivering: 0,
       refunding: 0,
       done: 0,
     }
@@ -66,21 +72,19 @@ export function MerchantOrdersPage() {
       if (o.status === 'pending_accept') map.pending_accept += 1
       else if (o.status === 'preparing') map.preparing += 1
       else if (o.status === 'ready') map.ready += 1
+      else if ((deliveringStatuses as readonly string[]).includes(o.status)) map.delivering += 1
       else if (o.status === 'refunding') map.refunding += 1
-      else if (
-        ['picked', 'delivering', 'delivered', 'rejected', 'cancelled', 'refunded'].includes(o.status)
-      ) {
-        map.done += 1
-      }
+      else if ((doneStatuses as readonly string[]).includes(o.status)) map.done += 1
     }
     return map
   }, [mine])
 
   const list = useMemo(() => {
+    if (tab === 'delivering') {
+      return mine.filter((o) => (deliveringStatuses as readonly string[]).includes(o.status))
+    }
     if (tab === 'done') {
-      return mine.filter((o) =>
-        ['picked', 'delivering', 'delivered', 'rejected', 'cancelled', 'refunded'].includes(o.status),
-      )
+      return mine.filter((o) => (doneStatuses as readonly string[]).includes(o.status))
     }
     return mine.filter((o) => o.status === tab)
   }, [mine, tab])
@@ -95,7 +99,7 @@ export function MerchantOrdersPage() {
       <header className="page-title-bar">
         <h1>订单处理</h1>
       </header>
-      <div className="seg underline">
+      <div className="seg underline merchant-order-tabs">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -230,7 +234,16 @@ export function MerchantOrdersPage() {
             <p className="merchant-wait-tip">
               {o.rider
                 ? `${o.rider.name} · ${o.rider.location}（骑手到店取餐后自动进入配送）`
-                : '已出餐，等待骑手到店凭取餐号取餐'}
+                : '已出餐，等待骑手接单后生成取餐号'}
+            </p>
+          ) : null}
+          {tab === 'delivering' ? (
+            <p className="merchant-wait-tip">
+              {o.rider
+                ? `${o.rider.name} · ${o.rider.location}`
+                : o.status === 'picked'
+                  ? '骑手已取餐，即将出发配送'
+                  : '骑手配送中'}
             </p>
           ) : null}
           {o.status === 'refunding' ? (

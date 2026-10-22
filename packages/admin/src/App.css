@@ -167,6 +167,8 @@
   color: #1677ff;
   padding: 0;
   font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .link-btn:hover {
@@ -859,37 +861,6 @@
   font-weight: 600;
 }
 
-.store-fold-btn {
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  margin-top: 1px;
-  padding: 0;
-  border: 1px solid #e5e6eb;
-  border-radius: 4px;
-  background: #fff;
-  color: #4e5969;
-  font-size: 12px;
-  line-height: 20px;
-  cursor: pointer;
-}
-
-.store-branch-mark {
-  flex: 0 0 auto;
-  width: 22px;
-  margin-top: 2px;
-  color: #c9cdd4;
-  text-align: center;
-}
-
-.store-row-hq td {
-  background: #fafbfc;
-}
-
-.store-row-branch td {
-  background: #fff;
-}
-
 .tip-icon {
   position: relative;
   display: inline-flex;
@@ -1364,4 +1335,190 @@ button.tip-icon-btn::after {
   .map-loc-body {
     grid-template-columns: 1fr;
   }
+}
+
+/* 单品规格组编辑 */
+.spec-group-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spec-group-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.spec-group-editor-head strong {
+  font-size: 14px;
+  color: #1f2329;
+}
+
+.spec-group-card {
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fafbfc;
+}
+
+.spec-group-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.spec-group-name {
+  flex: 1;
+  min-width: 120px;
+  height: 32px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.spec-group-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #4e5969;
+}
+
+.spec-group-modes label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.spec-library-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff7e6;
+  color: #d46b08;
+  font-size: 13px;
+}
+
+.spec-option-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-height: 28px;
+}
+
+.spec-option-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 999px;
+  background: #e8f3ff;
+  color: #1677ff;
+  font-size: 13px;
+}
+
+.spec-option-chip-x {
+  border: none;
+  background: transparent;
+  color: #86909c;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.spec-option-chip-x:hover {
+  color: #f53f3f;
+}
+
+.spec-option-empty {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.spec-group-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 嵌套在菜品编辑弹窗内的选项库选择层 */
+.spec-group-editor .modal-mask {
+  z-index: 1100;
+}
+
+.spec-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spec-picker-search {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.spec-picker-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: #4e5969;
+}
+
+.spec-picker-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.spec-picker-list {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+}
+
+.spec-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f2f3f5;
+  cursor: pointer;
+  font-size: 13px;
+  margin: 0;
+}
+
+.spec-picker-item:last-child {
+  border-bottom: none;
+}
+
+.spec-picker-item:hover {
+  background: #f7f8fa;
+}
+
+.spec-picker-name {
+  flex: 1;
+  color: #1f2329;
+}
+
+.spec-picker-price {
+  color: #86909c;
+  flex-shrink: 0;
 }

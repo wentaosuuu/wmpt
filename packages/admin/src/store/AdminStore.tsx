@@ -372,24 +372,13 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       const target = prev.find((a) => a.id === id)
       if (!target || target.status !== 'pending') return prev
       if (pass) {
-        const isHq = target.applyType === 'hq'
-        const storeId = `${isHq ? 'm' : 's'}${Date.now()}`
-        const hq = !isHq
-          ? merchants.find(
-              (m) =>
-                m.type === 'hq' &&
-                (m.name === target.parentMerchant || m.id === target.parentMerchant),
-            )
-          : undefined
+        const storeId = `s${Date.now()}`
         setMerchants((ms) => {
           const list = [
             ...ms,
             {
               id: storeId,
               name: target.name,
-              type: isHq ? ('hq' as const) : ('branch' as const),
-              parentId: isHq ? undefined : hq?.id,
-              parentName: isHq ? undefined : hq?.name ?? target.parentMerchant,
               takeout: false,
               frontListed: false,
               address: target.address,
@@ -400,11 +389,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
               qualStatus: 'valid' as const,
               license: target.license,
               expireAt: '2027-09-15',
-              minOrder: isHq ? 0 : 15,
-              deliveryFee: isHq ? 0 : 3,
+              minOrder: 15,
+              deliveryFee: 3,
               cuisine: target.cuisine || '快餐',
-              deposit: isHq ? 20000 : 0,
-              orderPackingFee: isHq ? 0 : 1,
+              deposit: 0,
+              orderPackingFee: 1,
               status: 'approved' as const,
             },
           ]
@@ -422,7 +411,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           : a,
       )
     })
-  }, [merchants, syncMinOrders])
+  }, [syncMinOrders])
 
   const updateProduct = useCallback(
     (id: string, patch: Partial<Product>) => {
@@ -466,27 +455,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     setSpecs((prev) => upsert(prev, s))
   }, [])
   const updateSpec = useCallback((id: string, patch: Partial<DishSpec>) => {
-    setSpecs((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, ...patch } : s))
-      setProducts((ps) =>
-        ps.map((p) => {
-          if (!p.specIds.includes(id)) return p
-          const names = next.filter((s) => p.specIds.includes(s.id) && s.enabled).map((s) => s.name)
-          return { ...p, spec: names.join(' / ') }
-        }),
-      )
-      return next
-    })
+    setSpecs((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
   }, [])
   const removeSpec = useCallback((id: string) => {
     setSpecs((prev) => prev.filter((s) => s.id !== id))
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (!p.specIds.includes(id)) return p
-        const specIds = p.specIds.filter((x) => x !== id)
-        return { ...p, specIds, spec: p.spec }
-      }),
-    )
   }, [])
 
   const updateOrder = useCallback((id: string, patch: Partial<AdminOrder>) => {

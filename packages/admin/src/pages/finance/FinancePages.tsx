@@ -150,9 +150,8 @@ function exportTradesCsv(rows: TradeRecord[]) {
 
 export function TradeFlowPage() {
   const { trades, merchants, notify } = useAdmin()
-  /** 与门店管理一致：流水挂在分店，筛选列表不含总店 */
   const stores = useMemo(
-    () => merchants.filter((m) => m.status === 'approved' && m.type === 'branch'),
+    () => merchants.filter((m) => m.status === 'approved'),
     [merchants],
   )
   const [draft, setDraft] = useState<TradeFilters>(emptyFilters)

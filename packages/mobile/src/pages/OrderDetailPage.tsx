@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DeliveryProofView } from '../components/DeliveryProof'
+import { OrderStatusGuide } from '../components/OrderStatusGuide'
 import { MoneyRow, NavBar, OrderNo, Tag } from '../components/ui'
 import {
   canApplyCancel,
@@ -8,7 +9,9 @@ import {
   canCancel,
   cancelPreview,
   cancelRuleRows,
+  fulfillmentStatusOrder,
   money,
+  statusHint,
   statusText,
 } from '../lib/utils'
 import { useApp } from '../store/AppStore'
@@ -35,6 +38,7 @@ export function OrderDetailPage() {
   const navigate = useNavigate()
   const [reason, setReason] = useState('计划有变')
   const [showCancelRules, setShowCancelRules] = useState(false)
+  const [showStatusGuide, setShowStatusGuide] = useState(false)
   /** 取消/退款/客服仅消费者端展示 */
   const isConsumer = role === 'consumer'
 
@@ -53,12 +57,32 @@ export function OrderDetailPage() {
     <section className="page">
       <NavBar title="订单详情" />
       <div className="card">
-        <h3 style={{ margin: '0 0 8px' }}>{statusText(order.status)}</h3>
+        <div className="order-status-head">
+          <h3 style={{ margin: 0 }}>{statusText(order.status)}</h3>
+          <button className="orders-guide-btn" type="button" onClick={() => setShowStatusGuide(true)}>
+            状态说明
+          </button>
+        </div>
+        {statusHint(order.status) ? <p className="order-status-hint">{statusHint(order.status)}</p> : null}
+        {(fulfillmentStatusOrder as readonly string[]).includes(order.status) ? (
+          <ol className="status-rail" aria-label="履约进度">
+            {fulfillmentStatusOrder.map((id) => {
+              const current = (fulfillmentStatusOrder as readonly string[]).indexOf(order.status)
+              const index = (fulfillmentStatusOrder as readonly string[]).indexOf(id)
+              const cls = index < current ? 'done' : index === current ? 'on' : ''
+              return (
+                <li key={id} className={cls}>
+                  {statusText(id)}
+                </li>
+              )
+            })}
+          </ol>
+        ) : null}
         {order.status === 'delivered' && order.eta ? (
           <p className="muted">实际送达 {order.eta}</p>
         ) : null}
         <OrderNo id={order.id} className="detail" />
-        {order.tradeNo ? <p className="muted">支付流水号 {order.tradeNo}</p> : null}
+        {order.tradeNo ? <p className="muted">流水号 {order.tradeNo}</p> : null}
         {order.refundTradeNo ? <p className="muted">退款流水号 {order.refundTradeNo}</p> : null}
         <p className="muted">
           {order.storeName} · {order.createdAt}
@@ -179,6 +203,8 @@ export function OrderDetailPage() {
         </button>
       </div>
       ) : null}
+
+      {showStatusGuide ? <OrderStatusGuide onClose={() => setShowStatusGuide(false)} /> : null}
 
       {isConsumer && showCancelRules ? (
         <div className="role-sheet" onClick={() => setShowCancelRules(false)}>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
 import { useAdmin } from '../../store/AdminStore'
 import type { Ticket } from '../../types'
@@ -19,6 +20,7 @@ export function TicketsPage() {
           t.id.includes(kw) ||
           t.user.includes(kw) ||
           t.phone.includes(kw) ||
+          (t.orderId ?? '').includes(kw) ||
           t.content.includes(kw) ||
           t.handler.includes(kw),
       ),
@@ -33,7 +35,7 @@ export function TicketsPage() {
       <Panel>
         <Toolbar>
           <input
-            placeholder="工单号 / 用户 / 手机号 / 内容 / 受理人"
+            placeholder="工单号 / 关联订单 / 用户 / 手机号 / 内容 / 受理人"
             value={kw}
             onChange={(e) => setKw(e.target.value)}
           />
@@ -44,6 +46,7 @@ export function TicketsPage() {
               <tr>
                 <th>工单号</th>
                 <th>类型</th>
+                <th>关联订单</th>
                 <th>用户</th>
                 <th>手机号</th>
                 <th>内容</th>
@@ -58,6 +61,15 @@ export function TicketsPage() {
                 <tr key={t.id}>
                   <td>{t.id}</td>
                   <td>{t.type === 'consult' ? '咨询' : '投诉'}</td>
+                  <td className="nowrap">
+                    {t.orderId ? (
+                      <Link className="link-btn" to={`/orders?kw=${encodeURIComponent(t.orderId)}`}>
+                        {t.orderId}
+                      </Link>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
                   <td>{t.user}</td>
                   <td className="nowrap">{t.phone || '-'}</td>
                   <td>{t.content}</td>
@@ -138,6 +150,16 @@ export function TicketsPage() {
           items={[
             { label: '工单', value: current?.id },
             { label: '类型', value: current?.type === 'complaint' ? '投诉' : '咨询' },
+            {
+              label: '关联订单',
+              value: current?.orderId ? (
+                <Link className="link-btn" to={`/orders?kw=${encodeURIComponent(current.orderId)}`}>
+                  {current.orderId}
+                </Link>
+              ) : (
+                '-'
+              ),
+            },
             { label: '用户', value: current?.user },
             { label: '手机号', value: current?.phone || '-' },
             { label: '内容', value: current?.content },

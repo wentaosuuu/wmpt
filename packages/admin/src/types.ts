@@ -9,12 +9,6 @@ export type AdminUser = {
 export type Merchant = {
   id: string
   name: string
-  /** 总店 / 分店 */
-  type: 'hq' | 'branch'
-  /** 分店所属总店 id；总店为空 */
-  parentId?: string
-  /** 分店所属总店名称（冗余展示） */
-  parentName?: string
   /** 是否开通外卖履约能力 */
   takeout: boolean
   /** 是否上架到移动端供用户下单（试点上架） */
@@ -69,11 +63,7 @@ export type StoreAttachment = {
 
 export type StoreApplication = {
   id: string
-  /** 入驻类型：总店 / 分店（分店须挂所属总店） */
-  applyType: 'hq' | 'branch'
   name: string
-  /** 分店所属总店名称 */
-  parentMerchant: string
   /** 市 / 区 / 街道 */
   city: string
   district: string
@@ -115,6 +105,7 @@ export type CuisineCategory = {
   isAll?: boolean
 }
 
+/** 门店级常用规格选项库（可快速加入单品规格组） */
 export type DishSpec = {
   id: string
   storeId: string
@@ -122,6 +113,25 @@ export type DishSpec = {
   name: string
   extraPrice: number
   enabled: boolean
+}
+
+/** 规格组选择模式：单选 / 多选 */
+export type SpecSelectMode = 'single' | 'multi'
+
+export type SpecOption = {
+  id: string
+  name: string
+  extraPrice: number
+}
+
+/** 挂在单品上的规格组（源数据，按菜品独立配置） */
+export type SpecGroup = {
+  id: string
+  name: string
+  mode: SpecSelectMode
+  /** 是否必选；单选必选时默认选第一项，多选必选时至少选 1 项 */
+  required: boolean
+  options: SpecOption[]
 }
 
 export type Product = {
@@ -139,7 +149,9 @@ export type Product = {
   stock: number
   soldOut: boolean
   onShelf: boolean
-  specIds: string[]
+  /** 该单品的规格组（单选/多选可混配） */
+  specGroups: SpecGroup[]
+  /** 列表摘要，如「份量 · 加料」 */
   spec: string
   /** 菜品图片（data URL），移动端菜单/详情展示 */
   photo?: string
@@ -181,7 +193,7 @@ export type AdminOrder = {
   deliveryFee: number
   status: AdminOrderStatus
   createdAt: string
-  /** 出餐时按门店先后顺序自动生成的 3 位取餐号 */
+  /** 骑手抢单后按门店先后顺序自动生成的 3 位取餐号 */
   pickupNo?: string
   rider?: string
   cancelReason?: string
@@ -219,6 +231,8 @@ export type TradeRecord = {
 export type Ticket = {
   id: string
   type: 'consult' | 'complaint'
+  /** 关联订单号；未从订单发起的咨询可为空 */
+  orderId?: string
   user: string
   /** 用户手机号，便于客服沟通 */
   phone: string

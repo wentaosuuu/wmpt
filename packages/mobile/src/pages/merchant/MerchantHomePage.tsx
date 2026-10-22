@@ -26,6 +26,7 @@ export function MerchantHomePage() {
   const pending = mine.filter((o) => o.status === 'pending_accept').length
   const preparing = mine.filter((o) => o.status === 'preparing').length
   const ready = mine.filter((o) => o.status === 'ready').length
+  const delivering = mine.filter((o) => ['picked', 'delivering'].includes(o.status)).length
   const refundPending = mine.filter((o) => o.status === 'refunding').length
 
   const today = useMemo(() => todayMerchantOverview(orders), [orders])
@@ -69,7 +70,7 @@ export function MerchantHomePage() {
         </div>
       </div>
 
-      <div className="role-stats">
+      <div className="role-stats cols-5">
         <Link to="/m/orders?tab=pending_accept">
           <b>{pending}</b>
           <span>待接单</span>
@@ -81,6 +82,10 @@ export function MerchantHomePage() {
         <Link to="/m/orders?tab=ready">
           <b>{ready}</b>
           <span>待取餐</span>
+        </Link>
+        <Link to="/m/orders?tab=delivering">
+          <b>{delivering}</b>
+          <span>配送中</span>
         </Link>
         <Link to="/m/orders?tab=refunding">
           <b>{refundPending}</b>

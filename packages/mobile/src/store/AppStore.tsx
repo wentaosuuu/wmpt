@@ -97,7 +97,7 @@ function patchOrder(
   }
 }
 
-/** 按门店出餐先后生成 001–999 的三位取餐号，满号后从 001 循环 */
+/** 按门店抢单先后生成 001–999 的三位取餐号，满号后从 001 循环 */
 function nextPickupNo(orders: Order[], storeId: string) {
   const nums = orders
     .filter((o) => o.storeId === storeId)
@@ -474,19 +474,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let pickupNo = ''
       setOrders((prev) => {
         const target = prev.find((o) => o.id === id)
-        pickupNo = target?.pickupNo || nextPickupNo(prev, target?.storeId || '')
+        pickupNo = target?.pickupNo || ''
         return prev.map((o) =>
           o.id === id
-            ? patchOrder(
-                o,
-                'ready',
-                { title: '出餐完成', desc: `取餐号 ${pickupNo}，待骑手到店核对取餐` },
-                { pickupNo },
-              )
+            ? patchOrder(o, 'ready', {
+                title: '出餐完成',
+                desc: pickupNo
+                  ? `已出餐，取餐号 ${pickupNo}，待骑手到店核对取餐`
+                  : '已出餐，等待骑手接单后生成取餐号',
+              })
             : o,
         )
       })
-      toast(`出餐完成，取餐号 ${pickupNo}`)
+      toast(pickupNo ? `出餐完成，取餐号 ${pickupNo}` : '出餐完成，等待骑手接单后生成取餐号')
     },
     [toast],
   )
@@ -547,25 +547,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast('已离开骑手听单，无法继续抢单')
         return
       }
-      setOrders((prev) =>
-        prev.map((o) =>
+      let pickupNo = ''
+      setOrders((prev) => {
+        const target = prev.find((o) => o.id === id)
+        if (!target) return prev
+        pickupNo = target.pickupNo || nextPickupNo(prev, target.storeId)
+        return prev.map((o) =>
           o.id === id
             ? {
                 ...o,
+                pickupNo,
                 rider: { ...RIDER_PROFILE, location: RIDER_TO_STORE },
                 timeline: [
                   ...o.timeline,
                   {
                     time: nowLabel().slice(11),
                     title: '骑手已接单',
-                    desc: `${RIDER_PROFILE.name} 正在赶往门店`,
+                    desc: `${RIDER_PROFILE.name} 正在赶往门店，取餐号 ${pickupNo}`,
                   },
                 ],
               }
             : o,
-        ),
-      )
-      toast('已接配送单，请尽快到店')
+        )
+      })
+      toast(pickupNo ? `已接配送单，取餐号 ${pickupNo}，请尽快到店` : '已接配送单，请尽快到店')
     },
     [role, riderOnline, toast],
   )
@@ -594,11 +599,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const riderDeliver = useCallback(
     (id: string) => {
       const target = orders.find((o) => o.id === id)
-      if (!target?.pickupNo) {
-        toast('商家尚未出餐，暂无取餐号')
+      if (!target || !['ready', 'picked'].includes(target.status)) {
+        toast('商家尚未出餐')
         return
       }
-      const no = `取餐号 ${target.pickupNo}，`
+      const no = target.pickupNo ? `取餐号 ${target.pickupNo}，` : ''
       setOrders((prev) =>
         prev.map((o) => {
           if (o.id !== id) return o

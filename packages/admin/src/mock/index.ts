@@ -1,3 +1,9 @@
+import {
+  autoSpecGroups,
+  makeSpecGroup,
+  makeSpecOption,
+  summarizeSpecGroups,
+} from '../lib/specGroups'
 import type {
   AdminOrder,
   CancelRule,
@@ -11,6 +17,7 @@ import type {
   StoreStaff,
   Pilot,
   Product,
+  SpecGroup,
   StoreApplication,
   SysDept,
   SysRole,
@@ -47,33 +54,8 @@ function sampleDishPhoto(title: string, from: string, to: string) {
 
 export const merchants: Merchant[] = [
   {
-    id: 'm1',
-    name: '云宝宝餐饮',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市西乡塘区高新街道 园区南区',
-    pickup: '-',
-    contact: '王经理',
-    phone: '0771-88000000',
-    hours: '10:00-20:30',
-    qualStatus: 'valid',
-    license: 'JY123456789',
-    expireAt: '2027-03-01',
-    doorPhoto: sampleDoorPhoto('云宝宝', '#91caff', '#1677ff'),
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '快餐',
-    deposit: 50000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's1',
     name: '南门食堂 · 外卖档口',
-    type: 'branch',
-    parentId: 'm1',
-    parentName: '云宝宝餐饮',
     takeout: true,
     frontListed: true,
     address: '云宝宝园区南门食堂 1 层',
@@ -95,9 +77,6 @@ export const merchants: Merchant[] = [
   {
     id: 's1b',
     name: '北区食堂 · 外卖档口',
-    type: 'branch',
-    parentId: 'm1',
-    parentName: '云宝宝餐饮',
     takeout: true,
     frontListed: true,
     address: '北区生活街 8 号',
@@ -117,32 +96,8 @@ export const merchants: Merchant[] = [
     status: 'approved',
   },
   {
-    id: 'm2',
-    name: '桂香餐饮',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市青秀区商业街',
-    pickup: '-',
-    contact: '陈总',
-    phone: '0771-88002000',
-    hours: '09:30-21:00',
-    qualStatus: 'valid',
-    license: 'JY223456000',
-    expireAt: '2027-01-01',
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '粉面',
-    deposit: 20000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's2',
     name: '桂香米粉馆',
-    type: 'branch',
-    parentId: 'm2',
-    parentName: '桂香餐饮',
     takeout: true,
     frontListed: true,
     address: '园区商业街 B2-08',
@@ -162,32 +117,8 @@ export const merchants: Merchant[] = [
     status: 'approved',
   },
   {
-    id: 'm3',
-    name: '轻食沙拉工坊',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市西乡塘区科研楼',
-    pickup: '-',
-    contact: '周主厨',
-    phone: '0771-88003000',
-    hours: '08:00-19:00',
-    qualStatus: 'valid',
-    license: 'JY334455667',
-    expireAt: '2027-06-01',
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '轻食',
-    deposit: 5000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's3',
     name: '轻食沙拉工坊 · 科研楼店',
-    type: 'branch',
-    parentId: 'm3',
-    parentName: '轻食沙拉工坊',
     takeout: true,
     frontListed: true,
     address: '科研楼一层咖啡角旁',
@@ -207,32 +138,8 @@ export const merchants: Merchant[] = [
     status: 'approved',
   },
   {
-    id: 'm4',
-    name: '北区烧烤',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市西乡塘区北区生活街',
-    pickup: '-',
-    contact: '赵老板',
-    phone: '0771-88004000',
-    hours: '16:00-23:30',
-    qualStatus: 'valid',
-    license: 'JY445566778',
-    expireAt: '2027-08-01',
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '烧烤',
-    deposit: 6000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's4',
     name: '北区烧烤铺',
-    type: 'branch',
-    parentId: 'm4',
-    parentName: '北区烧烤',
     takeout: true,
     frontListed: true,
     address: '北区生活街 12 号',
@@ -252,32 +159,8 @@ export const merchants: Merchant[] = [
     status: 'approved',
   },
   {
-    id: 'm5',
-    name: '一点点茶饮',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市青秀区商业街',
-    pickup: '-',
-    contact: '林店长',
-    phone: '0771-88005000',
-    hours: '10:00-21:30',
-    qualStatus: 'valid',
-    license: 'JY556677889',
-    expireAt: '2027-12-01',
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '奶茶',
-    deposit: 8000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's5',
     name: '一点点奶茶',
-    type: 'branch',
-    parentId: 'm5',
-    parentName: '一点点茶饮',
     takeout: true,
     frontListed: true,
     address: '园区商业街 A1-03',
@@ -297,32 +180,8 @@ export const merchants: Merchant[] = [
     status: 'approved',
   },
   {
-    id: 'm6',
-    name: '蜜桃甜品',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市西乡塘区科研楼',
-    pickup: '-',
-    contact: '桃桃',
-    phone: '0771-88006000',
-    hours: '11:00-20:00',
-    qualStatus: 'valid',
-    license: 'JY667788990',
-    expireAt: '2027-09-01',
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '甜品',
-    deposit: 5000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's6',
     name: '蜜桃甜品屋',
-    type: 'branch',
-    parentId: 'm6',
-    parentName: '蜜桃甜品',
     takeout: true,
     frontListed: true,
     address: '科研楼负一层',
@@ -342,32 +201,8 @@ export const merchants: Merchant[] = [
     status: 'approved',
   },
   {
-    id: 'm7',
-    name: '老友粉餐饮',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市西乡塘区南门生活广场',
-    pickup: '-',
-    contact: '阿贵',
-    phone: '0771-88007000',
-    hours: '09:00-21:00',
-    qualStatus: 'valid',
-    license: 'JY778899001',
-    expireAt: '2027-05-01',
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '粉面',
-    deposit: 7000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's7',
     name: '老友粉世家',
-    type: 'branch',
-    parentId: 'm7',
-    parentName: '老友粉餐饮',
     takeout: true,
     frontListed: true,
     address: '南门生活广场 2 层',
@@ -387,32 +222,8 @@ export const merchants: Merchant[] = [
     status: 'approved',
   },
   {
-    id: 'm8',
-    name: '果茶研究所',
-    type: 'hq',
-    takeout: false,
-    frontListed: false,
-    address: '南宁市青秀区商业街',
-    pickup: '-',
-    contact: '小果',
-    phone: '0771-88008000',
-    hours: '10:30-21:00',
-    qualStatus: 'valid',
-    license: 'JY889900112',
-    expireAt: '2027-11-01',
-    minOrder: 0,
-    deliveryFee: 0,
-    cuisine: '饮品',
-    deposit: 6000,
-    orderPackingFee: 0,
-    status: 'approved',
-  },
-  {
     id: 's8',
     name: '果茶研究所 · 商业街店',
-    type: 'branch',
-    parentId: 'm8',
-    parentName: '果茶研究所',
     takeout: true,
     frontListed: true,
     address: '园区商业街 C2-11',
@@ -528,9 +339,7 @@ export const merchantChangeLogs: MerchantChangeLog[] = [
 export const storeApplications: StoreApplication[] = [
   {
     id: 'app1',
-    applyType: 'branch',
     name: '北区面馆',
-    parentMerchant: '云宝宝餐饮',
     city: '南宁市',
     district: '兴宁区',
     street: '三塘街道',
@@ -562,9 +371,7 @@ export const storeApplications: StoreApplication[] = [
   },
   {
     id: 'app2',
-    applyType: 'branch',
     name: '园区咖啡站',
-    parentMerchant: '轻食沙拉工坊',
     city: '南宁市',
     district: '西乡塘区',
     street: '高新街道',
@@ -591,9 +398,7 @@ export const storeApplications: StoreApplication[] = [
   },
   {
     id: 'app3',
-    applyType: 'hq',
     name: '邕城煲仔饭',
-    parentMerchant: '',
     city: '南宁市',
     district: '青秀区',
     street: '南湖街道',
@@ -716,49 +521,115 @@ export const categories: DishCategory[] = [
   { id: 'c8c', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '芝士奶盖', sort: 3, enabled: true },
 ]
 
+/** 门店规格选项库（演示用，覆盖份量/辣度/杯型/加料等） */
 export const specs: DishSpec[] = [
+  // —— 南门食堂 · 外卖档口 s1 ——
   { id: 'sp1', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '标准份', extraPrice: 0, enabled: true },
-  { id: 'sp2', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '加肉', extraPrice: 6, enabled: true },
   { id: 'sp1b', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '加大份', extraPrice: 4, enabled: true },
+  { id: 'sp1-small', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '小份', extraPrice: 0, enabled: true },
+  { id: 'sp2', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '加肉', extraPrice: 6, enabled: true },
+  { id: 'sp1-egg', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '加蛋', extraPrice: 2, enabled: true },
+  { id: 'sp1-veg', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '加时蔬', extraPrice: 3, enabled: true },
+  { id: 'sp1-rice', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '加米饭', extraPrice: 2, enabled: true },
+  { id: 'sp1-mild', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '微辣', extraPrice: 0, enabled: true },
+  { id: 'sp1-mid', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '中辣', extraPrice: 0, enabled: true },
+  { id: 'sp1-hot', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '特辣', extraPrice: 0, enabled: true },
+  { id: 'sp1-no-spice', storeId: 's1', storeName: '南门食堂 · 外卖档口', name: '不辣', extraPrice: 0, enabled: true },
+  // —— 桂香米粉馆 s2 ——
+  { id: 'sp5e', storeId: 's2', storeName: '桂香米粉馆', name: '标准份', extraPrice: 0, enabled: true },
+  { id: 'sp5b', storeId: 's2', storeName: '桂香米粉馆', name: '细粉', extraPrice: 0, enabled: true },
+  { id: 'sp5c', storeId: 's2', storeName: '桂香米粉馆', name: '粗粉', extraPrice: 0, enabled: true },
+  { id: 'sp2-mix', storeId: 's2', storeName: '桂香米粉馆', name: '粉面混合', extraPrice: 0, enabled: true },
   { id: 'sp3', storeId: 's2', storeName: '桂香米粉馆', name: '微辣', extraPrice: 0, enabled: true },
   { id: 'sp4', storeId: 's2', storeName: '桂香米粉馆', name: '中辣', extraPrice: 0, enabled: true },
   { id: 'sp5', storeId: 's2', storeName: '桂香米粉馆', name: '特辣', extraPrice: 0, enabled: true },
-  { id: 'sp5b', storeId: 's2', storeName: '桂香米粉馆', name: '细粉', extraPrice: 0, enabled: true },
-  { id: 'sp5c', storeId: 's2', storeName: '桂香米粉馆', name: '粗粉', extraPrice: 0, enabled: true },
   { id: 'sp5d', storeId: 's2', storeName: '桂香米粉馆', name: '加牛肉', extraPrice: 8, enabled: true },
-  { id: 'sp5e', storeId: 's2', storeName: '桂香米粉馆', name: '标准份', extraPrice: 0, enabled: true },
+  { id: 'sp2-egg', storeId: 's2', storeName: '桂香米粉馆', name: '加卤蛋', extraPrice: 3, enabled: true },
+  { id: 'sp2-tofu', storeId: 's2', storeName: '桂香米粉馆', name: '加豆腐', extraPrice: 2, enabled: true },
+  { id: 'sp2-sour', storeId: 's2', storeName: '桂香米粉馆', name: '加酸笋', extraPrice: 2, enabled: true },
+  { id: 'sp2-big', storeId: 's2', storeName: '桂香米粉馆', name: '加大碗', extraPrice: 4, enabled: true },
+  // —— 轻食沙拉工坊 s3 ——
   { id: 'sp6', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '标准份', extraPrice: 0, enabled: true },
-  { id: 'sp7', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '芝麻酱', extraPrice: 2, enabled: true },
-  { id: 'sp7b', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '油醋汁', extraPrice: 0, enabled: true },
-  { id: 'sp7c', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '千岛酱', extraPrice: 1, enabled: true },
+  { id: 'sp3-large', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '大份', extraPrice: 6, enabled: true },
   { id: 'sp7d', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '大杯', extraPrice: 3, enabled: true },
+  { id: 'sp7b', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '油醋汁', extraPrice: 0, enabled: true },
+  { id: 'sp7', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '芝麻酱', extraPrice: 2, enabled: true },
+  { id: 'sp7c', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '千岛酱', extraPrice: 1, enabled: true },
+  { id: 'sp3-ranch', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '凯撒酱', extraPrice: 2, enabled: true },
+  { id: 'sp3-chicken', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '加鸡胸', extraPrice: 6, enabled: true },
+  { id: 'sp3-egg', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '加水煮蛋', extraPrice: 3, enabled: true },
+  { id: 'sp3-avocado', storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', name: '加牛油果', extraPrice: 5, enabled: true },
+  // —— 北区食堂 s1b ——
   { id: 'sp1b1', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '标准份', extraPrice: 0, enabled: true },
   { id: 'sp1b2', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '加大份', extraPrice: 4, enabled: true },
+  { id: 'sp1b-small', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '小份', extraPrice: 0, enabled: true },
   { id: 'sp1b3', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '加肉', extraPrice: 5, enabled: true },
+  { id: 'sp1b-egg', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '加蛋', extraPrice: 2, enabled: true },
+  { id: 'sp1b-veg', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '加青菜', extraPrice: 2, enabled: true },
+  { id: 'sp1b-mild', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '微辣', extraPrice: 0, enabled: true },
+  { id: 'sp1b-mid', storeId: 's1b', storeName: '北区食堂 · 外卖档口', name: '中辣', extraPrice: 0, enabled: true },
+  // —— 北区烧烤铺 s4 ——
+  { id: 'sp4d', storeId: 's4', storeName: '北区烧烤铺', name: '标准份', extraPrice: 0, enabled: true },
+  { id: 'sp4f', storeId: 's4', storeName: '北区烧烤铺', name: '双人拼', extraPrice: 18, enabled: true },
   { id: 'sp4a', storeId: 's4', storeName: '北区烧烤铺', name: '微辣', extraPrice: 0, enabled: true },
   { id: 'sp4b', storeId: 's4', storeName: '北区烧烤铺', name: '中辣', extraPrice: 0, enabled: true },
+  { id: 'sp4-hot', storeId: 's4', storeName: '北区烧烤铺', name: '特辣', extraPrice: 0, enabled: true },
   { id: 'sp4c', storeId: 's4', storeName: '北区烧烤铺', name: '蒜香', extraPrice: 0, enabled: true },
-  { id: 'sp4d', storeId: 's4', storeName: '北区烧烤铺', name: '标准份', extraPrice: 0, enabled: true },
+  { id: 'sp4-cumin', storeId: 's4', storeName: '北区烧烤铺', name: '孜然', extraPrice: 0, enabled: true },
   { id: 'sp4e', storeId: 's4', storeName: '北区烧烤铺', name: '加蒜蓉', extraPrice: 2, enabled: true },
-  { id: 'sp4f', storeId: 's4', storeName: '北区烧烤铺', name: '双人拼', extraPrice: 18, enabled: true },
+  { id: 'sp4-sauce', storeId: 's4', storeName: '北区烧烤铺', name: '加烧烤酱', extraPrice: 1, enabled: true },
+  { id: 'sp4-glove', storeId: 's4', storeName: '北区烧烤铺', name: '多要手套', extraPrice: 0, enabled: true },
+  // —— 一点点奶茶 s5 ——
   { id: 'sp5a', storeId: 's5', storeName: '一点点奶茶', name: '中杯', extraPrice: 0, enabled: true },
   { id: 'sp5b1', storeId: 's5', storeName: '一点点奶茶', name: '大杯', extraPrice: 2, enabled: true },
+  { id: 'sp5-xl', storeId: 's5', storeName: '一点点奶茶', name: '超大杯', extraPrice: 4, enabled: true },
   { id: 'sp5c', storeId: 's5', storeName: '一点点奶茶', name: '少冰', extraPrice: 0, enabled: true },
   { id: 'sp5d', storeId: 's5', storeName: '一点点奶茶', name: '去冰', extraPrice: 0, enabled: true },
+  { id: 'sp5-normal-ice', storeId: 's5', storeName: '一点点奶茶', name: '正常冰', extraPrice: 0, enabled: true },
+  { id: 'sp5-hot', storeId: 's5', storeName: '一点点奶茶', name: '热饮', extraPrice: 0, enabled: true },
+  { id: 'sp5-sugar-full', storeId: 's5', storeName: '一点点奶茶', name: '全糖', extraPrice: 0, enabled: true },
+  { id: 'sp5-sugar-half', storeId: 's5', storeName: '一点点奶茶', name: '半糖', extraPrice: 0, enabled: true },
+  { id: 'sp5-sugar-less', storeId: 's5', storeName: '一点点奶茶', name: '少糖', extraPrice: 0, enabled: true },
+  { id: 'sp5-sugar-no', storeId: 's5', storeName: '一点点奶茶', name: '无糖', extraPrice: 0, enabled: true },
+  { id: 'sp5-pearl', storeId: 's5', storeName: '一点点奶茶', name: '珍珠', extraPrice: 2, enabled: true },
+  { id: 'sp5-coco', storeId: 's5', storeName: '一点点奶茶', name: '椰果', extraPrice: 2, enabled: true },
+  { id: 'sp5-pudding', storeId: 's5', storeName: '一点点奶茶', name: '布丁', extraPrice: 3, enabled: true },
+  { id: 'sp5-taro', storeId: 's5', storeName: '一点点奶茶', name: '芋圆', extraPrice: 3, enabled: true },
+  // —— 蜜桃甜品屋 s6 ——
   { id: 'sp6a', storeId: 's6', storeName: '蜜桃甜品屋', name: '标准份', extraPrice: 0, enabled: true },
   { id: 'sp6b', storeId: 's6', storeName: '蜜桃甜品屋', name: '双人份', extraPrice: 12, enabled: true },
   { id: 'sp6c', storeId: 's6', storeName: '蜜桃甜品屋', name: '大杯', extraPrice: 4, enabled: true },
+  { id: 'sp6-mid', storeId: 's6', storeName: '蜜桃甜品屋', name: '中杯', extraPrice: 0, enabled: true },
   { id: 'sp6d', storeId: 's6', storeName: '蜜桃甜品屋', name: '加奶油', extraPrice: 3, enabled: true },
+  { id: 'sp6-ice', storeId: 's6', storeName: '蜜桃甜品屋', name: '加冰淇淋球', extraPrice: 5, enabled: true },
+  { id: 'sp6-fruit', storeId: 's6', storeName: '蜜桃甜品屋', name: '加水果', extraPrice: 4, enabled: true },
+  { id: 'sp6-less-sweet', storeId: 's6', storeName: '蜜桃甜品屋', name: '少糖', extraPrice: 0, enabled: true },
+  // —— 老友粉世家 s7 ——
+  { id: 'sp7s', storeId: 's7', storeName: '老友粉世家', name: '标准份', extraPrice: 0, enabled: true },
+  { id: 'sp7t', storeId: 's7', storeName: '老友粉世家', name: '加大碗', extraPrice: 4, enabled: true },
   { id: 'sp7a', storeId: 's7', storeName: '老友粉世家', name: '微辣', extraPrice: 0, enabled: true },
   { id: 'sp7x', storeId: 's7', storeName: '老友粉世家', name: '中辣', extraPrice: 0, enabled: true },
   { id: 'sp7y', storeId: 's7', storeName: '老友粉世家', name: '特辣', extraPrice: 0, enabled: true },
+  { id: 'sp7-no', storeId: 's7', storeName: '老友粉世家', name: '不辣', extraPrice: 0, enabled: true },
   { id: 'sp7z', storeId: 's7', storeName: '老友粉世家', name: '加酸笋', extraPrice: 2, enabled: true },
-  { id: 'sp7s', storeId: 's7', storeName: '老友粉世家', name: '标准份', extraPrice: 0, enabled: true },
-  { id: 'sp7t', storeId: 's7', storeName: '老友粉世家', name: '加大碗', extraPrice: 4, enabled: true },
+  { id: 'sp7-meat', storeId: 's7', storeName: '老友粉世家', name: '加肉末', extraPrice: 4, enabled: true },
+  { id: 'sp7-egg', storeId: 's7', storeName: '老友粉世家', name: '加卤蛋', extraPrice: 3, enabled: true },
+  { id: 'sp7-fine', storeId: 's7', storeName: '老友粉世家', name: '细粉', extraPrice: 0, enabled: true },
+  { id: 'sp7-thick', storeId: 's7', storeName: '老友粉世家', name: '粗粉', extraPrice: 0, enabled: true },
+  // —— 果茶研究所 s8 ——
   { id: 'sp8a', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '中杯', extraPrice: 0, enabled: true },
   { id: 'sp8b', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '大杯', extraPrice: 3, enabled: true },
-  { id: 'sp8c', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '加芝士', extraPrice: 4, enabled: true },
+  { id: 'sp8-xl', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '超大杯', extraPrice: 5, enabled: true },
   { id: 'sp8d', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '少糖', extraPrice: 0, enabled: true },
+  { id: 'sp8-half', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '半糖', extraPrice: 0, enabled: true },
+  { id: 'sp8-full', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '全糖', extraPrice: 0, enabled: true },
+  { id: 'sp8-no-sugar', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '无糖', extraPrice: 0, enabled: true },
+  { id: 'sp8-less-ice', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '少冰', extraPrice: 0, enabled: true },
+  { id: 'sp8-no-ice', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '去冰', extraPrice: 0, enabled: true },
+  { id: 'sp8c', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '加芝士', extraPrice: 4, enabled: true },
+  { id: 'sp8-pearl', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '珍珠', extraPrice: 2, enabled: true },
+  { id: 'sp8-jelly', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '椰果', extraPrice: 2, enabled: true },
+  { id: 'sp8-aloe', storeId: 's8', storeName: '果茶研究所 · 商业街店', name: '加芦荟', extraPrice: 2, enabled: true },
 ]
 
 /** 与移动端菜品描述对齐，后台可编辑后同步 */
@@ -803,7 +674,7 @@ const dishDescSeeds: Record<string, string> = {
   d12d: '芝士奶盖茶，推荐少糖。',
 }
 
-export const products: Product[] = (
+const rawProductSeeds = (
   [
   {
     id: 'd1',
@@ -1413,11 +1284,94 @@ export const products: Product[] = (
     specIds: ['sp8a', 'sp8b', 'sp8c'],
     spec: '中杯 / 大杯 / 加芝士',
   },
-] as Omit<Product, 'description'>[]
-).map((p) => ({
-  ...p,
-  description: dishDescSeeds[p.id] ?? p.name,
-}))
+] as (Omit<Product, 'description' | 'specGroups' | 'spec'> & {
+  specIds: string[]
+  spec: string
+})[]
+)
+
+/** 演示：部分单品显式配置单选+多选规格组 */
+const productSpecOverrides: Record<string, SpecGroup[]> = {
+  d1: [
+    makeSpecGroup('份量', 'single', [
+      makeSpecOption('标准份', 0, 'sp1'),
+      makeSpecOption('加大份', 4, 'sp1b'),
+    ]),
+    makeSpecGroup('加料', 'multi', [makeSpecOption('加肉', 6, 'sp2')], false),
+  ],
+  d5: [
+    makeSpecGroup('粉型', 'single', [
+      makeSpecOption('细粉', 0, 'sp5b'),
+      makeSpecOption('粗粉', 0, 'sp5c'),
+    ]),
+    makeSpecGroup('加料', 'multi', [makeSpecOption('加牛肉', 8, 'sp5d')], false),
+  ],
+  d9: [
+    makeSpecGroup('杯型', 'single', [
+      makeSpecOption('中杯', 0, 'sp5a'),
+      makeSpecOption('大杯', 2, 'sp5b1'),
+    ]),
+    makeSpecGroup(
+      '加料',
+      'multi',
+      [makeSpecOption('珍珠', 2, 'sp5-pearl'), makeSpecOption('椰果', 2, 'sp5-coco')],
+      false,
+    ),
+  ],
+  d9c: [
+    makeSpecGroup('杯型', 'single', [
+      makeSpecOption('中杯', 0, 'sp5a-c'),
+      makeSpecOption('大杯', 2, 'sp5b1-c'),
+    ]),
+    makeSpecGroup('冰量', 'single', [makeSpecOption('少冰', 0, 'sp5c'), makeSpecOption('去冰', 0, 'sp5d')], false),
+  ],
+  d11b: [
+    makeSpecGroup('辣度', 'single', [
+      makeSpecOption('微辣', 0, 'sp7a'),
+      makeSpecOption('中辣', 0, 'sp7x'),
+      makeSpecOption('特辣', 0, 'sp7y'),
+    ]),
+    makeSpecGroup('份量', 'single', [
+      makeSpecOption('标准碗', 0, 'sp7s-b'),
+      makeSpecOption('加大碗', 4, 'sp7t'),
+    ]),
+    makeSpecGroup('加料', 'multi', [makeSpecOption('加酸笋', 2, 'sp7z')], false),
+  ],
+  d12: [
+    makeSpecGroup('杯型', 'single', [
+      makeSpecOption('中杯', 0, 'sp8a'),
+      makeSpecOption('大杯', 3, 'sp8b'),
+    ]),
+    makeSpecGroup(
+      '加料',
+      'multi',
+      [makeSpecOption('加芝士', 4, 'sp8c'), makeSpecOption('少糖', 0, 'sp8d')],
+      false,
+    ),
+  ],
+  d12d: [
+    makeSpecGroup('杯型', 'single', [
+      makeSpecOption('中杯', 0, 'sp8a-d'),
+      makeSpecOption('大杯', 3, 'sp8b-d'),
+    ]),
+    makeSpecGroup('加料', 'multi', [makeSpecOption('加芝士', 4, 'sp8c-d')], false),
+  ],
+}
+
+export const products: Product[] = rawProductSeeds.map((p) => {
+  const flat = p.specIds
+    .map((id) => specs.find((s) => s.id === id))
+    .filter((s): s is DishSpec => !!s)
+    .map((s) => ({ id: s.id, name: s.name, extraPrice: s.extraPrice }))
+  const specGroups = productSpecOverrides[p.id] ?? autoSpecGroups(flat)
+  const { specIds: _ids, spec: _legacy, ...rest } = p
+  return {
+    ...rest,
+    description: dishDescSeeds[p.id] ?? p.name,
+    specGroups,
+    spec: summarizeSpecGroups(specGroups),
+  }
+})
 
 /** 演示菜品图（与移动端同 id，保存后可同步到消费者端） */
 const dishPhotoSeeds: Record<string, [string, string, string]> = {
@@ -1458,7 +1412,7 @@ for (const p of products) {
   if (seed) p.photo = sampleDishPhoto(...seed)
 }
 
-/** 交易流水演示数据：门店 id/名称与 merchants 分店一致 */
+/** 交易流水演示数据：门店 id/名称与门店档案一致 */
 /** 编号规则与 @wmpt/shared（ORDER_ID_TIP / TRADE_NO_TIP）一致 */
 export const tradeRecords: TradeRecord[] = [
   {
@@ -1800,9 +1754,8 @@ export const seedOrders: AdminOrder[] = [
     deliveryFee: 4,
     status: 'ready',
     createdAt: '2026-09-15 11:50',
-    pickupNo: '015',
     remark: '汤和粉分开装',
-    note: '出餐完成，取餐号 015，待骑手取餐',
+    note: '出餐完成，等待骑手接单后生成取餐号',
   },
   {
     id: 'WMPT20260914000018',
@@ -1846,6 +1799,7 @@ export const tickets: Ticket[] = [
   {
     id: 'CS001',
     type: 'consult',
+    orderId: 'WMPT20260915000001',
     user: '张晓楠',
     phone: '13800138000',
     content: '骑手在西门岗亭，如何交接？',
@@ -1858,6 +1812,7 @@ export const tickets: Ticket[] = [
   {
     id: 'TS001',
     type: 'complaint',
+    orderId: 'WMPT20260915000066',
     user: '周敏',
     phone: '13800138002',
     content: '汤洒漏，申请全额退款',
@@ -1870,6 +1825,7 @@ export const tickets: Ticket[] = [
   {
     id: 'TS002',
     type: 'complaint',
+    orderId: 'WMPT20260915000070',
     user: '陈凯',
     phone: '13800138003',
     content: '餐品与描述不符',
@@ -1894,22 +1850,14 @@ export const tickets: Ticket[] = [
 ]
 
 export const coverages: Coverage[] = [
-  { storeId: 'm1', storeName: '云宝宝餐饮', radiusKm: 3, enabled: false },
   { storeId: 's1', storeName: '南门食堂 · 外卖档口', radiusKm: 3, enabled: true },
   { storeId: 's1b', storeName: '北区食堂 · 外卖档口', radiusKm: 2, enabled: true },
-  { storeId: 'm2', storeName: '桂香餐饮', radiusKm: 2.5, enabled: false },
   { storeId: 's2', storeName: '桂香米粉馆', radiusKm: 2.5, enabled: true },
-  { storeId: 'm3', storeName: '轻食沙拉工坊', radiusKm: 1.5, enabled: false },
   { storeId: 's3', storeName: '轻食沙拉工坊 · 科研楼店', radiusKm: 1.5, enabled: true },
-  { storeId: 'm4', storeName: '北区烧烤', radiusKm: 3, enabled: false },
   { storeId: 's4', storeName: '北区烧烤铺', radiusKm: 3, enabled: true },
-  { storeId: 'm5', storeName: '一点点茶饮', radiusKm: 2.5, enabled: false },
   { storeId: 's5', storeName: '一点点奶茶', radiusKm: 2.5, enabled: true },
-  { storeId: 'm6', storeName: '蜜桃甜品', radiusKm: 2, enabled: false },
   { storeId: 's6', storeName: '蜜桃甜品屋', radiusKm: 2, enabled: true },
-  { storeId: 'm7', storeName: '老友粉餐饮', radiusKm: 2.5, enabled: false },
   { storeId: 's7', storeName: '老友粉世家', radiusKm: 2.5, enabled: true },
-  { storeId: 'm8', storeName: '果茶研究所', radiusKm: 2.5, enabled: false },
   { storeId: 's8', storeName: '果茶研究所 · 商业街店', radiusKm: 2.5, enabled: true },
 ]
 

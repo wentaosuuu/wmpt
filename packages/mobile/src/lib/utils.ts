@@ -11,21 +11,72 @@ export function money(n: number) {
   return `¥${n.toFixed(2)}`
 }
 
+/** 消费者可见的订单状态。列表「进行中」是分组，不是把这些状态都叫配送中。 */
+export const orderStatusMeta: Record<string, { label: string; hint: string }> = {
+  pending_pay: {
+    label: '待支付',
+    hint: '订单已提交，请在支付时限内完成付款，超时将自动关闭。',
+  },
+  pending_accept: {
+    label: '待商家接单',
+    hint: '已支付，等待商家确认接单。此时可直接取消，款项全额退回。',
+  },
+  preparing: {
+    label: '商家备餐中',
+    hint: '商家已接单并开始制作，餐品尚未出餐。此时仍可直接取消并全额退回。',
+  },
+  ready: {
+    label: '商家已出餐',
+    hint: '餐品已做好，等待骑手到店凭取餐号取餐。取消需商家审核。',
+  },
+  picked: {
+    label: '骑手已取餐',
+    hint: '骑手已在门店取到餐品，即将出发配送。取消需商家审核。',
+  },
+  delivering: {
+    label: '配送中',
+    hint: '骑手已出发，正在送往收货地址。取消需商家审核。',
+  },
+  delivered: {
+    label: '已送达',
+    hint: '餐品已送达，订单完成。如有问题可申请售后退款，不可再取消订单。',
+  },
+  rejected: {
+    label: '商家拒单',
+    hint: '商家无法接单，订单已关闭。已支付金额会原路退回。',
+  },
+  cancelled: {
+    label: '已取消',
+    hint: '订单已关闭。若取消前已支付，相应款项按规则退回。',
+  },
+  refunding: {
+    label: '退款审核中',
+    hint: '已提交取消或售后退款，等待商家审核。有异议可联系客服。',
+  },
+  refunded: {
+    label: '已退款',
+    hint: '商家已同意退款，款项按原支付渠道退回。',
+  },
+}
+
+export const fulfillmentStatusOrder = [
+  'pending_pay',
+  'pending_accept',
+  'preparing',
+  'ready',
+  'picked',
+  'delivering',
+  'delivered',
+] as const
+
+export const aftersaleStatusOrder = ['rejected', 'cancelled', 'refunding', 'refunded'] as const
+
 export function statusText(status: string) {
-  const map: Record<string, string> = {
-    pending_pay: '待支付',
-    pending_accept: '待商家接单',
-    rejected: '商家拒单',
-    preparing: '商家备餐中',
-    ready: '商家已出餐',
-    picked: '骑手已取餐',
-    delivering: '配送中',
-    delivered: '已送达',
-    cancelled: '已取消',
-    refunding: '退款审核中',
-    refunded: '已退款',
-  }
-  return map[status] ?? status
+  return orderStatusMeta[status]?.label ?? status
+}
+
+export function statusHint(status: string) {
+  return orderStatusMeta[status]?.hint ?? ''
 }
 
 export function storeById(id: string): Store | undefined {

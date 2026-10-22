@@ -24,7 +24,7 @@ export const menus: MenuNode[] = [
     children: [
       { key: '/products/dishes', to: '/products/dishes', label: '菜品管理' },
       { key: '/products/categories', to: '/products/categories', label: '菜品分类' },
-      { key: '/products/specs', to: '/products/specs', label: '规格管理' },
+      { key: '/products/specs', to: '/products/specs', label: '规格选项库' },
       { key: '/products/stock', to: '/products/stock', label: '售罄管理' },
       { key: '/products/packing', to: '/products/packing', label: '包装费设置' },
     ],

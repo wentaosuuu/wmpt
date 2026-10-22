@@ -32,9 +32,21 @@ export type Store = {
   doorPhoto?: string
 }
 
-export type DishSpec = {
+export type SpecSelectMode = 'single' | 'multi'
+
+export type SpecOption = {
+  id: string
   name: string
   extra: number
+}
+
+/** 单品规格组：可单选或多选 */
+export type SpecGroup = {
+  id: string
+  name: string
+  mode: SpecSelectMode
+  required: boolean
+  options: SpecOption[]
 }
 
 export type Dish = {
@@ -47,8 +59,8 @@ export type Dish = {
   soldOut: boolean
   stock: number
   description: string
-  /** 来自后台「规格管理」关联到该菜品的规格 */
-  specs: DishSpec[]
+  /** 按单品配置的规格组（单选/多选可混配） */
+  specGroups: SpecGroup[]
   utensils: string
   /** emoji 占位封面 */
   cover?: string
@@ -157,7 +169,7 @@ export type Order = {
   dishAmount: number
   payable: number
   timeline: TimelineEvent[]
-  /** 商家出餐后生成的三位取餐号，供骑手到店快速取餐 */
+  /** 骑手抢单后按门店顺序生成的三位取餐号，供到店核对取餐 */
   pickupNo?: string
   rider?: { name: string; phone: string; location: string }
   /** 实际送达时刻（骑手确认送达后写入） */

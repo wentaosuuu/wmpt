@@ -129,8 +129,6 @@ export function RiderTasksPage() {
                   {tab === 'arrived' ? '到店报号取餐' : tab === 'heading' ? '到店后报号' : '凭号核对'}
                 </em>
               </div>
-            ) : o.status === 'preparing' ? (
-              <div className="pickup-no-waiting">商家备餐中，出餐后生成取餐号</div>
             ) : null}
 
             <div className="rider-route">
@@ -230,12 +228,12 @@ export function RiderTasksPage() {
                   我已到店
                 </button>
               ) : null}
-              {tab === 'arrived' && !o.pickupNo ? (
+              {tab === 'arrived' && !['ready', 'picked'].includes(o.status) ? (
                 <p className="merchant-wait-tip" style={{ flex: 1, margin: 0 }}>
                   已到店，等待商家出餐后凭取餐号确认取餐
                 </p>
               ) : null}
-              {tab === 'arrived' && o.pickupNo ? (
+              {tab === 'arrived' && ['ready', 'picked'].includes(o.status) ? (
                 <button
                   className="btn"
                   type="button"

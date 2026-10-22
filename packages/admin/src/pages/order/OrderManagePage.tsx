@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
 import { useOptionalStoreFilter } from '../../hooks/useStoreFilter'
 import { statusLabel, useAdmin } from '../../store/AdminStore'
@@ -63,22 +64,13 @@ export function OrderLines({ items }: { items: AdminOrderLine[] }) {
 
 type ActionMode = 'view' | 'accept' | 'reject' | 'prep' | null
 
-/** 按门店出餐先后生成 001–999 的三位取餐号，满号后从 001 循环 */
-function nextPickupNo(list: AdminOrder[], storeId: string) {
-  const nums = list
-    .filter((o) => o.storeId === storeId)
-    .map((o) => Number.parseInt(o.pickupNo || '', 10))
-    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 999)
-  const max = nums.length ? Math.max(...nums) : 0
-  const next = max >= 999 ? 1 : max + 1
-  return String(next).padStart(3, '0')
-}
-
 export function OrderManagePage() {
   const { orders, updateOrder, notify } = useAdmin()
   const { stores, storeId, setStoreId, matchStore } = useOptionalStoreFilter()
-  const [tab, setTab] = useState<TabKey>('pending_accept')
-  const [kw, setKw] = useState('')
+  const [searchParams] = useSearchParams()
+  const initialKw = searchParams.get('kw') ?? ''
+  const [tab, setTab] = useState<TabKey>(initialKw ? 'all' : 'pending_accept')
+  const [kw, setKw] = useState(initialKw)
   const [current, setCurrent] = useState<AdminOrder | null>(null)
   const [mode, setMode] = useState<ActionMode>(null)
   const [reason, setReason] = useState('已售罄')
@@ -123,7 +115,7 @@ export function OrderManagePage() {
     <>
       <PageHeader
         title="订单管理"
-        desc="同一订单按状态推进：待接单 → 备餐中 → 待取餐 → 配送中。商家完成接单与出餐后，待取餐由骑手到店凭取餐号取餐。"
+        desc="同一订单按状态推进：待接单 → 备餐中 → 待取餐 → 配送中。取餐号在骑手抢单后按门店顺序生成，出餐后由骑手到店凭号取餐。"
       />
       <Panel>
         <div className="order-tabs">
@@ -358,13 +350,15 @@ export function OrderManagePage() {
               type="button"
               onClick={() => {
                 if (!current) return
-                const pickupNo = current.pickupNo || nextPickupNo(orders, current.storeId)
                 updateOrder(current.id, {
                   status: 'ready',
-                  pickupNo,
-                  note: `出餐完成，取餐号 ${pickupNo}，等待骑手取餐`,
+                  note: current.pickupNo
+                    ? `出餐完成，取餐号 ${current.pickupNo}，等待骑手取餐`
+                    : '出餐完成，等待骑手接单后生成取餐号',
                 })
-                notify(`出餐完成，取餐号 ${pickupNo}`)
+                notify(
+                  current.pickupNo ? `出餐完成，取餐号 ${current.pickupNo}` : '出餐完成，等待骑手接单',
+                )
                 setTab('ready')
                 close()
               }}
@@ -375,7 +369,7 @@ export function OrderManagePage() {
         }
       >
         <p style={{ margin: 0, fontSize: 14, color: '#4e5969', lineHeight: 1.7 }}>
-          确认订单 {current?.id} 已出餐？确认后系统按本店出餐先后自动生成 3 位取餐号，进入「待取餐」。
+          确认订单 {current?.id} 已出餐？确认后进入「待取餐」。取餐号在骑手抢单时生成，出餐不会新生成号码。
         </p>
       </Modal>
     </>

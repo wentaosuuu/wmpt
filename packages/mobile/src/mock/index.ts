@@ -1,6 +1,7 @@
 import { sampleDeliveryProof } from '../lib/proof'
 import { RIDER_AT_STORE, RIDER_NAME, RIDER_TO_STORE } from '../lib/riderStage'
-import type { Address, Dish, Order, Store, User } from '../types'
+import { autoGroups, makeGroup, makeOption } from '../lib/specGroups'
+import type { Address, Dish, Order, SpecGroup, Store, User } from '../types'
 
 const RIDER = { name: RIDER_NAME, phone: '13900001111' }
 
@@ -40,7 +41,7 @@ function dishPhoto(title: string, from: string, to: string) {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
-/** 与后台 merchants 分店一一对应（id / 名称 / 电话 / 起送配送 / 上架状态） */
+/** 与后台门店一一对应（id / 名称 / 电话 / 起送配送 / 上架状态） */
 export const stores: Store[] = [
   {
     id: 's1',
@@ -260,8 +261,273 @@ export const stores: Store[] = [
   },
 ]
 
-/** 菜品规格与后台「规格管理」保持一致：门店先建规格，菜品再关联 */
-export const dishes: Dish[] = [
+/** 扁平 specs 仅作兜底；演示优先走下方完整规格组（单选/多选混配） */
+type DishSeed = Omit<Dish, 'specGroups'> & {
+  specs: { name: string; extra: number }[]
+}
+
+const spiceOpts = () => [
+  makeOption('不辣', 0),
+  makeOption('微辣', 0),
+  makeOption('中辣', 0),
+  makeOption('特辣', 0),
+]
+
+const cupOpts = (largeExtra: number) => [
+  makeOption('中杯', 0),
+  makeOption('大杯', largeExtra),
+]
+
+const iceOpts = () => [
+  makeOption('正常冰', 0),
+  makeOption('少冰', 0),
+  makeOption('去冰', 0),
+  makeOption('热饮', 0),
+]
+
+const sugarOpts = () => [
+  makeOption('全糖', 0),
+  makeOption('半糖', 0),
+  makeOption('少糖', 0),
+  makeOption('无糖', 0),
+]
+
+/** 移动端规格演示：覆盖食堂/粉面/轻食/烧烤/奶茶/甜品/果茶 */
+const dishSpecOverrides: Record<string, SpecGroup[]> = {
+  // —— 南门食堂 ——
+  d1: [
+    makeGroup('份量', 'single', [
+      makeOption('小份', 0),
+      makeOption('标准份', 0),
+      makeOption('加大份', 4),
+    ]),
+    makeGroup(
+      '加料',
+      'multi',
+      [makeOption('加肉', 6), makeOption('加蛋', 2), makeOption('加时蔬', 3)],
+      false,
+    ),
+  ],
+  d2: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('加大份', 4)]),
+    makeGroup('加料', 'multi', [makeOption('加蛋', 2), makeOption('加米饭', 2)], false),
+  ],
+  d1b: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('加大份', 4)]),
+    makeGroup('辣度', 'single', spiceOpts(), false),
+    makeGroup('加料', 'multi', [makeOption('加肉', 6), makeOption('加时蔬', 3)], false),
+  ],
+  d3: [makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('加大份', 2)])],
+  d3b: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0)]),
+    makeGroup('口味', 'single', [makeOption('微辣', 0), makeOption('不辣', 0)], false),
+  ],
+  // —— 桂香米粉馆 ——
+  d4: [
+    makeGroup('粉型', 'single', [
+      makeOption('细粉', 0),
+      makeOption('粗粉', 0),
+      makeOption('粉面混合', 0),
+    ]),
+    makeGroup('辣度', 'single', spiceOpts()),
+    makeGroup(
+      '加料',
+      'multi',
+      [makeOption('加卤蛋', 3), makeOption('加酸笋', 2), makeOption('加豆腐', 2)],
+      false,
+    ),
+  ],
+  d5: [
+    makeGroup('粉型', 'single', [makeOption('细粉', 0), makeOption('粗粉', 0)]),
+    makeGroup('辣度', 'single', [makeOption('微辣', 0), makeOption('中辣', 0), makeOption('特辣', 0)]),
+    makeGroup(
+      '加料',
+      'multi',
+      [makeOption('加牛肉', 8), makeOption('加卤蛋', 3), makeOption('加大碗', 4)],
+      false,
+    ),
+  ],
+  d5b: [
+    makeGroup('粉型', 'single', [makeOption('细粉', 0), makeOption('粗粉', 0)]),
+    makeGroup('辣度', 'single', spiceOpts()),
+    makeGroup('加料', 'multi', [makeOption('加酸笋', 2), makeOption('加卤蛋', 3)], false),
+  ],
+  d5c: [makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('双份', 3)])],
+  // —— 轻食沙拉 ——
+  d6: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('大份', 6)]),
+    makeGroup('酱汁', 'single', [
+      makeOption('油醋汁', 0),
+      makeOption('芝麻酱', 2),
+      makeOption('千岛酱', 1),
+      makeOption('凯撒酱', 2),
+    ]),
+    makeGroup(
+      '加料',
+      'multi',
+      [makeOption('加鸡胸', 6), makeOption('加水煮蛋', 3), makeOption('加牛油果', 5)],
+      false,
+    ),
+  ],
+  d6b: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('大份', 6)]),
+    makeGroup('酱汁', 'single', [
+      makeOption('油醋汁', 0),
+      makeOption('芝麻酱', 2),
+      makeOption('千岛酱', 1),
+    ]),
+    makeGroup('加料', 'multi', [makeOption('加水煮蛋', 3), makeOption('加牛油果', 5)], false),
+  ],
+  d7: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('大杯', 3)]),
+    makeGroup('加料', 'multi', [makeOption('加水果', 4)], false),
+  ],
+  d7b: [
+    makeGroup('杯型', 'single', [makeOption('标准份', 0), makeOption('大杯', 3)]),
+    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0)]),
+  ],
+  // —— 北区烧烤 ——
+  d8: [
+    makeGroup('口味', 'single', [
+      makeOption('微辣', 0),
+      makeOption('中辣', 0),
+      makeOption('特辣', 0),
+      makeOption('蒜香', 0),
+      makeOption('孜然', 0),
+    ]),
+    makeGroup('加料', 'multi', [makeOption('加蒜蓉', 2), makeOption('加烧烤酱', 1)], false),
+  ],
+  d8b: [
+    makeGroup('口味', 'single', [
+      makeOption('微辣', 0),
+      makeOption('中辣', 0),
+      makeOption('特辣', 0),
+      makeOption('孜然', 0),
+    ]),
+    makeGroup('加料', 'multi', [makeOption('加烧烤酱', 1)], false),
+  ],
+  d8c: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('双人拼', 18)]),
+    makeGroup('加料', 'multi', [makeOption('加蒜蓉', 2)], false),
+  ],
+  // —— 一点点奶茶 ——
+  d9: [
+    makeGroup('杯型', 'single', [...cupOpts(2), makeOption('超大杯', 4)]),
+    makeGroup('甜度', 'single', sugarOpts()),
+    makeGroup('冰量', 'single', iceOpts()),
+    makeGroup(
+      '加料',
+      'multi',
+      [
+        makeOption('珍珠', 2),
+        makeOption('椰果', 2),
+        makeOption('布丁', 3),
+        makeOption('芋圆', 3),
+      ],
+      false,
+    ),
+  ],
+  d9b: [
+    makeGroup('杯型', 'single', cupOpts(2)),
+    makeGroup('甜度', 'single', sugarOpts()),
+    makeGroup('冰量', 'single', iceOpts()),
+    makeGroup('加料', 'multi', [makeOption('珍珠', 2), makeOption('布丁', 3)], false),
+  ],
+  d9c: [
+    makeGroup('杯型', 'single', cupOpts(2)),
+    makeGroup('甜度', 'single', sugarOpts()),
+    makeGroup('冰量', 'single', [
+      makeOption('正常冰', 0),
+      makeOption('少冰', 0),
+      makeOption('去冰', 0),
+    ]),
+  ],
+  // —— 蜜桃甜品 ——
+  d10: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('双人份', 12)]),
+    makeGroup('加料', 'multi', [makeOption('加奶油', 3), makeOption('加冰淇淋球', 5)], false),
+  ],
+  d10b: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0)]),
+    makeGroup('加料', 'multi', [makeOption('加奶油', 3)], false),
+  ],
+  d10c: [
+    makeGroup('杯型', 'single', [makeOption('中杯', 0), makeOption('大杯', 4)]),
+    makeGroup('甜度', 'single', [makeOption('正常糖', 0), makeOption('少糖', 0)], false),
+    makeGroup('加料', 'multi', [makeOption('加水果', 4), makeOption('加冰淇淋球', 5)], false),
+  ],
+  // —— 老友粉世家 ——
+  d11: [
+    makeGroup('粉型', 'single', [makeOption('细粉', 0), makeOption('粗粉', 0)]),
+    makeGroup('辣度', 'single', spiceOpts()),
+    makeGroup(
+      '加料',
+      'multi',
+      [makeOption('加酸笋', 2), makeOption('加肉末', 4), makeOption('加卤蛋', 3)],
+      false,
+    ),
+  ],
+  d11b: [
+    makeGroup('粉型', 'single', [makeOption('细粉', 0), makeOption('粗粉', 0)]),
+    makeGroup('辣度', 'single', spiceOpts()),
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('加大碗', 4)]),
+    makeGroup(
+      '加料',
+      'multi',
+      [makeOption('加酸笋', 2), makeOption('加肉末', 4), makeOption('加卤蛋', 3)],
+      false,
+    ),
+  ],
+  d11c: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0)]),
+    makeGroup('口味', 'single', [makeOption('微辣', 0), makeOption('不辣', 0)], false),
+  ],
+  // —— 果茶研究所 ——
+  d12: [
+    makeGroup('杯型', 'single', [...cupOpts(3), makeOption('超大杯', 5)]),
+    makeGroup('甜度', 'single', sugarOpts()),
+    makeGroup('冰量', 'single', [
+      makeOption('正常冰', 0),
+      makeOption('少冰', 0),
+      makeOption('去冰', 0),
+    ]),
+    makeGroup(
+      '加料',
+      'multi',
+      [makeOption('加芝士', 4), makeOption('珍珠', 2), makeOption('椰果', 2), makeOption('加芦荟', 2)],
+      false,
+    ),
+  ],
+  d12b: [
+    makeGroup('杯型', 'single', cupOpts(3)),
+    makeGroup('甜度', 'single', sugarOpts()),
+    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0)]),
+    makeGroup('加料', 'multi', [makeOption('加芝士', 4), makeOption('珍珠', 2)], false),
+  ],
+  d12c: [
+    makeGroup('杯型', 'single', cupOpts(3)),
+    makeGroup('甜度', 'single', sugarOpts()),
+    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0)]),
+    makeGroup('加料', 'multi', [makeOption('加芦荟', 2), makeOption('椰果', 2)], false),
+  ],
+  // —— 北区食堂 ——
+  d1c: [
+    makeGroup('份量', 'single', [
+      makeOption('小份', 0),
+      makeOption('标准份', 0),
+      makeOption('加大份', 4),
+    ]),
+    makeGroup('辣度', 'single', [makeOption('微辣', 0), makeOption('中辣', 0)], false),
+    makeGroup('加料', 'multi', [makeOption('加肉', 5), makeOption('加蛋', 2)], false),
+  ],
+  d1d: [
+    makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('加大份', 4)]),
+    makeGroup('加料', 'multi', [makeOption('加肉', 5), makeOption('加青菜', 2)], false),
+  ],
+  d1e: [makeGroup('份量', 'single', [makeOption('标准份', 0), makeOption('加大份', 2)])],
+}
+
+const rawDishes: DishSeed[] = [
   // —— 南门食堂 · 外卖档口 s1 ——
   {
     id: 'd1',
@@ -542,7 +808,7 @@ export const dishes: Dish[] = [
     packingFee: 0.5,
     soldOut: false,
     stock: 99,
-    description: '经典波霸奶茶，甜度冰量请写在备注。',
+    description: '经典波霸奶茶，甜度/冰量/加料可在下方规格中选择。',
     specs: [
       { name: '中杯', extra: 0 },
       { name: '大杯', extra: 2 },
@@ -559,7 +825,7 @@ export const dishes: Dish[] = [
     packingFee: 0.5,
     soldOut: false,
     stock: 80,
-    description: '浓郁麦香，甜度冰量请写在备注。',
+    description: '浓郁麦香，甜度/冰量/加料可在下方规格中选择。',
     specs: [
       { name: '中杯', extra: 0 },
       { name: '大杯', extra: 2 },
@@ -576,7 +842,7 @@ export const dishes: Dish[] = [
     packingFee: 0.5,
     soldOut: false,
     stock: 70,
-    description: '清爽无奶，甜度冰量请写在备注。',
+    description: '清爽无奶，甜度与冰量可在下方规格中选择。',
     specs: [
       { name: '中杯', extra: 0 },
       { name: '大杯', extra: 2 },
@@ -695,7 +961,7 @@ export const dishes: Dish[] = [
     packingFee: 0.5,
     soldOut: false,
     stock: 60,
-    description: '现切百香果，甜度请写在备注。',
+    description: '现切百香果，甜度/冰量/加料可在下方规格中选择。',
     specs: [
       { name: '中杯', extra: 0 },
       { name: '大杯', extra: 3 },
@@ -712,7 +978,7 @@ export const dishes: Dish[] = [
     packingFee: 0.5,
     soldOut: false,
     stock: 45,
-    description: '草莓芝士奶盖，甜度请写在备注。',
+    description: '草莓芝士奶盖，甜度与冰量可在下方规格中选择。',
     specs: [
       { name: '中杯', extra: 0 },
       { name: '大杯', extra: 3 },
@@ -729,7 +995,7 @@ export const dishes: Dish[] = [
     packingFee: 0.5,
     soldOut: false,
     stock: 50,
-    description: '清爽柠檬茶，甜度请写在备注。',
+    description: '清爽柠檬茶，甜度与冰量可在下方规格中选择。',
     specs: [
       { name: '中杯', extra: 0 },
       { name: '大杯', extra: 3 },
@@ -787,6 +1053,11 @@ export const dishes: Dish[] = [
     cover: '🥣',
   },
 ]
+
+export const dishes: Dish[] = rawDishes.map(({ specs, ...rest }) => ({
+  ...rest,
+  specGroups: dishSpecOverrides[rest.id] ?? autoGroups(specs),
+}))
 
 const dishPhotoSeeds: Record<string, [string, string, string]> = {
   d1: ['滑鸡套餐', '#ffd666', '#fa8c16'],
@@ -847,8 +1118,8 @@ export const defaultAddresses: Address[] = [
 /**
  * 演示订单：覆盖消费者 / 商家 / 骑手各状态，时间线与字段保持履约逻辑一致。
  *
- * 消费者：待支付→待接单→备餐中→已出餐→已取餐→配送中→已送达→拒单/取消/退款审核/已退款
- * 商家：待接单 / 备餐中 / 待取餐 / 退款 / 已完成(含配送中·送达·拒单·取消·已退款)
+ * 消费者：待支付→待接单→备餐中→已出餐→已取餐→配送中→已送达；列表「进行中」含接单到送达前。拒单/取消/退款另计
+ * 商家：待接单 / 备餐中 / 待取餐 / 配送中(已取餐·配送中) / 退款 / 已完成(送达·拒单·取消·已退款)
  * 骑手：待接单池 / 前往门店 / 到店待取 / 配送中 / 已完成 / 已取消
  */
 export const seedOrders: Order[] = [
@@ -980,11 +1251,12 @@ export const seedOrders: Order[] = [
     extraFee: 0,
     dishAmount: 26,
     payable: 30,
+    pickupNo: '366',
     rider: { ...RIDER, location: RIDER_TO_STORE },
     timeline: [
       { time: '11:35', title: '支付成功', desc: '微信支付 ¥30.00' },
       { time: '11:36', title: '商家已接单', desc: '开始备餐，平台已自动发送配送单给骑手' },
-      { time: '11:38', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店` },
+      { time: '11:38', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店，取餐号 366` },
     ],
   },
   // —— 商家已出餐 · 骑手待接单池 ——
@@ -1024,11 +1296,48 @@ export const seedOrders: Order[] = [
     extraFee: 0,
     dishAmount: 40,
     payable: 44,
-    pickupNo: '318',
     timeline: [
       { time: '11:20', title: '支付成功', desc: '微信支付 ¥44.00' },
       { time: '11:21', title: '商家已接单', desc: '开始备餐' },
-      { time: '11:38', title: '出餐完成', desc: '取餐号 318，待骑手到店核对取餐' },
+      { time: '11:38', title: '出餐完成', desc: '已出餐，等待骑手接单后生成取餐号' },
+    ],
+  },
+  // —— 商家侧·配送中（本店已取餐送出）——
+  {
+    id: 'WMPT20261013000014',
+    storeId: 's1',
+    storeName: '南门食堂 · 外卖档口',
+    items: [
+      {
+        dishId: 'd2',
+        name: '番茄炒蛋盖饭',
+        spec: '标准份',
+        remark: '',
+        price: 16,
+        packingFee: 0,
+        qty: 1,
+      },
+    ],
+    address: defaultAddresses[0],
+    payChannel: 'wechat',
+    tradeNo: 'TF202610131045000023',
+    status: 'delivering',
+    createdAt: '2026-10-13 10:45',
+    payDeadline: '2026-10-13 11:00',
+    remark: '',
+    packingFee: 1,
+    deliveryFee: 3,
+    extraFee: 0,
+    dishAmount: 16,
+    payable: 20,
+    pickupNo: '372',
+    rider: { ...RIDER, location: '配送途中' },
+    timeline: [
+      { time: '10:45', title: '支付成功', desc: '微信支付 ¥20.00' },
+      { time: '10:46', title: '商家已接单', desc: '开始备餐' },
+      { time: '10:50', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店，取餐号 372` },
+      { time: '11:00', title: '出餐完成', desc: '已出餐，取餐号 372' },
+      { time: '11:05', title: '骑手已取餐', desc: '取餐号 372，正在送往收货地址' },
     ],
   },
   // —— 商家已出餐 · 骑手到店待取 ——
@@ -1064,8 +1373,8 @@ export const seedOrders: Order[] = [
     timeline: [
       { time: '11:10', title: '支付成功', desc: '微信支付 ¥31.00' },
       { time: '11:11', title: '商家已接单', desc: '开始备餐' },
-      { time: '11:14', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店` },
-      { time: '11:28', title: '出餐完成', desc: '取餐号 206，待骑手到店核对取餐' },
+      { time: '11:14', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店，取餐号 206` },
+      { time: '11:28', title: '出餐完成', desc: '已出餐，取餐号 206，待骑手到店核对取餐' },
       { time: '11:30', title: '骑手已到店', desc: '请凭取餐号取餐' },
     ],
   },
@@ -1102,8 +1411,8 @@ export const seedOrders: Order[] = [
     timeline: [
       { time: '10:55', title: '支付成功', desc: '支付宝支付 ¥44.00' },
       { time: '10:56', title: '商家已接单', desc: '开始备餐' },
-      { time: '10:58', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店` },
-      { time: '11:12', title: '出餐完成', desc: '取餐号 512' },
+      { time: '10:58', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店，取餐号 512` },
+      { time: '11:12', title: '出餐完成', desc: '已出餐，取餐号 512' },
       { time: '11:15', title: '骑手已到店', desc: '请凭取餐号取餐' },
       { time: '11:16', title: '商家已交餐', desc: `已核对订单并交给骑手 ${RIDER_NAME}` },
     ],
@@ -1332,11 +1641,12 @@ export const seedOrders: Order[] = [
     dishAmount: 28,
     payable: 35,
     cancelReason: '计划有变，不需要了',
+    pickupNo: '221',
     rider: { ...RIDER, location: '订单已取消' },
     timeline: [
       { time: '11:10', title: '支付成功', desc: '微信支付 ¥35.00' },
       { time: '11:11', title: '商家已接单', desc: '开始备餐，平台已自动发送配送单给骑手' },
-      { time: '11:13', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店` },
+      { time: '11:13', title: '骑手已接单', desc: `${RIDER_NAME} 正在赶往门店，取餐号 221` },
       { time: '11:18', title: '用户申请取消', desc: '计划有变，不需要了' },
     ],
   },

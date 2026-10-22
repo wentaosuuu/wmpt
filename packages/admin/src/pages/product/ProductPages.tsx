@@ -1,12 +1,286 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DescList, Field, Modal, PageHeader, Panel, StatusTag, Toolbar } from '../../components/ui'
+import {
+  defaultSpecGroups,
+  makeSpecGroup,
+  makeSpecOption,
+  summarizeSpecGroups,
+  validateSpecGroups,
+} from '../../lib/specGroups'
 import { useAdmin } from '../../store/AdminStore'
-import type { DishCategory, DishSpec, Product } from '../../types'
+import type { DishCategory, DishSpec, Product, SpecGroup } from '../../types'
+
+/** 单品规格组编辑器：选项只能从门店「规格选项库」弹窗勾选 */
+function SpecGroupEditor({
+  groups,
+  library,
+  onChange,
+}: {
+  groups: SpecGroup[]
+  library: DishSpec[]
+  onChange: (next: SpecGroup[]) => void
+}) {
+  const [pickerGroupId, setPickerGroupId] = useState<string | null>(null)
+  const [pickerKw, setPickerKw] = useState('')
+  const [pickerSelected, setPickerSelected] = useState<string[]>([])
+
+  const pickerGroup = groups.find((g) => g.id === pickerGroupId)
+  const usedNames = useMemo(
+    () => new Set(pickerGroup?.options.map((o) => o.name) ?? []),
+    [pickerGroup],
+  )
+  const available = useMemo(
+    () => library.filter((s) => !usedNames.has(s.name)),
+    [library, usedNames],
+  )
+  const filtered = useMemo(() => {
+    const kw = pickerKw.trim()
+    if (!kw) return available
+    return available.filter((s) => s.name.includes(kw))
+  }, [available, pickerKw])
+
+  function patchGroup(id: string, patch: Partial<SpecGroup>) {
+    onChange(groups.map((g) => (g.id === id ? { ...g, ...patch } : g)))
+  }
+
+  function removeGroup(id: string) {
+    onChange(groups.filter((g) => g.id !== id))
+  }
+
+  function addGroup() {
+    onChange([...groups, makeSpecGroup('新规格组', 'single', [], true)])
+  }
+
+  function removeOption(groupId: string, optId: string) {
+    onChange(
+      groups.map((g) => {
+        if (g.id !== groupId) return g
+        return { ...g, options: g.options.filter((o) => o.id !== optId) }
+      }),
+    )
+  }
+
+  function openPicker(groupId: string) {
+    setPickerGroupId(groupId)
+    setPickerKw('')
+    setPickerSelected([])
+  }
+
+  function closePicker() {
+    setPickerGroupId(null)
+    setPickerKw('')
+    setPickerSelected([])
+  }
+
+  function confirmPicker() {
+    if (!pickerGroupId || !pickerSelected.length) {
+      closePicker()
+      return
+    }
+    const picked = library.filter((s) => pickerSelected.includes(s.id))
+    onChange(
+      groups.map((g) => {
+        if (g.id !== pickerGroupId) return g
+        const exist = new Set(g.options.map((o) => o.name))
+        const add = picked
+          .filter((s) => !exist.has(s.name))
+          .map((s) => makeSpecOption(s.name, s.extraPrice))
+        return { ...g, options: [...g.options, ...add] }
+      }),
+    )
+    closePicker()
+  }
+
+  function togglePickerItem(id: string) {
+    setPickerSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  function togglePickerAll() {
+    const ids = filtered.map((s) => s.id)
+    const allOn = ids.length > 0 && ids.every((id) => pickerSelected.includes(id))
+    if (allOn) {
+      setPickerSelected((prev) => prev.filter((id) => !ids.includes(id)))
+    } else {
+      setPickerSelected((prev) => [...new Set([...prev, ...ids])])
+    }
+  }
+
+  const filteredAllSelected =
+    filtered.length > 0 && filtered.every((s) => pickerSelected.includes(s.id))
+
+  return (
+    <div className="spec-group-editor">
+      <div className="spec-group-editor-head">
+        <div>
+          <strong>规格配置</strong>
+          <p className="attach-hint" style={{ margin: '4px 0 0' }}>
+            按本单品配置规格组（单选/多选）。选项须从「规格选项库」选取，不可自由填写；库内无合适项请先去选项库新增。
+          </p>
+        </div>
+        <button className="btn ghost" type="button" onClick={addGroup}>
+          添加规格组
+        </button>
+      </div>
+      {!library.length ? (
+        <p className="spec-library-empty">该门店选项库为空，请先在左侧「规格选项库」中添加常用选项。</p>
+      ) : null}
+      {!groups.length ? <p className="muted" style={{ margin: '8px 0' }}>暂无规格组，请添加</p> : null}
+      {groups.map((g) => {
+        const left = library.filter((s) => !g.options.some((o) => o.name === s.name)).length
+        return (
+          <div key={g.id} className="spec-group-card">
+            <div className="spec-group-card-head">
+              <input
+                className="spec-group-name"
+                value={g.name}
+                placeholder="规格组名称，如杯型、加料"
+                onChange={(e) => patchGroup(g.id, { name: e.target.value })}
+              />
+              <div className="spec-group-modes">
+                <label>
+                  <input
+                    type="radio"
+                    name={`mode-${g.id}`}
+                    checked={g.mode === 'single'}
+                    onChange={() => patchGroup(g.id, { mode: 'single', required: true })}
+                  />
+                  单选
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name={`mode-${g.id}`}
+                    checked={g.mode === 'multi'}
+                    onChange={() => patchGroup(g.id, { mode: 'multi', required: false })}
+                  />
+                  多选
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={g.required}
+                    onChange={(e) => patchGroup(g.id, { required: e.target.checked })}
+                  />
+                  必选
+                </label>
+              </div>
+              <button
+                className="link-btn danger"
+                type="button"
+                disabled={groups.length <= 1}
+                onClick={() => removeGroup(g.id)}
+              >
+                删除组
+              </button>
+            </div>
+            <div className="spec-option-chips">
+              {g.options.map((o) => (
+                <span key={o.id} className="spec-option-chip">
+                  {o.name}
+                  {o.extraPrice ? ` +¥${o.extraPrice}` : ''}
+                  <button
+                    type="button"
+                    className="spec-option-chip-x"
+                    aria-label={`移除 ${o.name}`}
+                    onClick={() => removeOption(g.id, o.id)}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {!g.options.length ? (
+                <span className="spec-option-empty">尚未选择选项</span>
+              ) : null}
+            </div>
+            <div className="spec-group-card-actions">
+              <button
+                className="btn ghost"
+                type="button"
+                disabled={!library.length || left === 0}
+                onClick={() => openPicker(g.id)}
+              >
+                {left === 0 && library.length ? '选项已全部选用' : '从选项库选择'}
+              </button>
+            </div>
+          </div>
+        )
+      })}
+
+      <Modal
+        open={!!pickerGroupId}
+        title={`选择规格选项${pickerGroup?.name ? ` · ${pickerGroup.name}` : ''}`}
+        width={480}
+        onClose={closePicker}
+        footer={
+          <>
+            <button className="btn ghost" type="button" onClick={closePicker}>
+              取消
+            </button>
+            <button
+              className="btn"
+              type="button"
+              disabled={!pickerSelected.length}
+              onClick={confirmPicker}
+            >
+              确认添加{pickerSelected.length ? `（${pickerSelected.length}）` : ''}
+            </button>
+          </>
+        }
+      >
+        <div className="spec-picker">
+          <input
+            className="spec-picker-search"
+            placeholder="搜索选项名称"
+            value={pickerKw}
+            onChange={(e) => setPickerKw(e.target.value)}
+            autoFocus
+          />
+          <div className="spec-picker-toolbar">
+            <label>
+              <input
+                type="checkbox"
+                checked={filteredAllSelected}
+                disabled={!filtered.length}
+                onChange={togglePickerAll}
+              />
+              全选当前列表
+            </label>
+            <span className="muted">
+              可选 {available.length} 项
+              {pickerKw.trim() ? ` · 筛选 ${filtered.length}` : ''}
+            </span>
+          </div>
+          <div className="spec-picker-list">
+            {filtered.map((s) => (
+              <label key={s.id} className="spec-picker-item">
+                <input
+                  type="checkbox"
+                  checked={pickerSelected.includes(s.id)}
+                  onChange={() => togglePickerItem(s.id)}
+                />
+                <span className="spec-picker-name">{s.name}</span>
+                <span className="spec-picker-price">
+                  {s.extraPrice ? `+¥${s.extraPrice}` : '不加价'}
+                </span>
+              </label>
+            ))}
+            {!filtered.length ? (
+              <div className="empty-block">
+                {available.length ? '无匹配选项' : '没有可添加的选项了'}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </Modal>
+    </div>
+  )
+}
 
 function useStoreFilter() {
   const { merchants } = useAdmin()
-  /** 菜品/分类/规格挂在分店；总店不维护菜单 */
-  const stores = merchants.filter((m) => m.status === 'approved' && m.type === 'branch')
+  const stores = merchants.filter((m) => m.status === 'approved')
   const [storeId, setStoreId] = useState(() => stores[0]?.id ?? '')
   const effectiveId = storeId && stores.some((s) => s.id === storeId) ? storeId : stores[0]?.id ?? ''
   return {
@@ -87,11 +361,12 @@ export function DishesPage() {
       return
     }
     if (!storeSpecs.length) {
-      notify('请先在「规格管理」中为该门店创建规格')
+      notify('请先在「规格选项库」中为该门店添加选项')
       return
     }
     const cat = storeCats[0]
-    const spec = storeSpecs[0]
+    const first = storeSpecs[0]
+    const groups = defaultSpecGroups({ name: first.name, extraPrice: first.extraPrice })
     setForm({
       id: `d${Date.now()}`,
       storeId: store.id,
@@ -106,8 +381,8 @@ export function DishesPage() {
       stock: 50,
       soldOut: false,
       onShelf: false,
-      specIds: [spec.id],
-      spec: spec.name,
+      specGroups: groups,
+      spec: summarizeSpecGroups(groups),
       photo: '',
     })
     setMode('edit')
@@ -117,7 +392,7 @@ export function DishesPage() {
     <>
       <PageHeader
         title="菜品管理"
-        desc="先选择门店，再维护该门店菜品。分类与规格请在对应菜单中配置。"
+        desc="先选择门店，再维护该门店菜品。规格按单品配置（支持单选/多选组）；选项库可在「规格管理」维护。"
         extra={
           <button className="btn" type="button" onClick={openCreate}>
             新增菜品
@@ -259,7 +534,7 @@ export function DishesPage() {
       <Modal
         open={mode === 'edit' && !!form}
         title={products.some((p) => p.id === form?.id) ? '编辑菜品' : '新增菜品'}
-        width={640}
+        width={720}
         onClose={() => setMode(null)}
         footer={
           <>
@@ -275,8 +550,9 @@ export function DishesPage() {
                   notify('请填写所属门店、菜品名称、分类和价格')
                   return
                 }
-                if (!form.specIds.length) {
-                  notify('请选择规格')
+                const specErr = validateSpecGroups(form.specGroups)
+                if (specErr) {
+                  notify(specErr)
                   return
                 }
                 if (!form.description.trim()) {
@@ -284,11 +560,10 @@ export function DishesPage() {
                   return
                 }
                 const cat = storeCats.find((c) => c.id === form.categoryId)
-                const selected = storeSpecs.filter((s) => form.specIds.includes(s.id))
                 saveProduct({
                   ...form,
                   category: cat?.name ?? form.category,
-                  spec: selected.map((s) => s.name).join(' / '),
+                  spec: summarizeSpecGroups(form.specGroups),
                 })
                 notify('菜品已保存')
                 setMode(null)
@@ -345,25 +620,11 @@ export function DishesPage() {
               />
             </div>
             <div className="form-field" style={{ gridColumn: '1 / -1' }}>
-              <label>可选规格（可多选）</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 13 }}>
-                {storeSpecs.map((s) => (
-                  <label key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <input
-                      type="checkbox"
-                      checked={form.specIds.includes(s.id)}
-                      onChange={(e) => {
-                        const specIds = e.target.checked
-                          ? [...form.specIds, s.id]
-                          : form.specIds.filter((id) => id !== s.id)
-                        setForm({ ...form, specIds })
-                      }}
-                    />
-                    {s.name}
-                    {s.extraPrice ? ` (+¥${s.extraPrice})` : ''}
-                  </label>
-                ))}
-              </div>
+              <SpecGroupEditor
+                groups={form.specGroups}
+                library={storeSpecs}
+                onChange={(specGroups) => setForm({ ...form, specGroups })}
+              />
             </div>
             <div className="form-field" style={{ gridColumn: '1 / -1' }}>
               <label>菜品图片</label>
@@ -682,13 +943,22 @@ export function SpecsPage() {
     `${storeId}|${kw}`,
   )
 
+  /** 选项名在本店菜品规格组中出现的次数（仅作参考，非强绑定） */
+  function usageCount(name: string) {
+    return products.filter(
+      (p) =>
+        p.storeId === storeId &&
+        p.specGroups.some((g) => g.options.some((o) => o.name === name)),
+    ).length
+  }
+
   function batchEnable(enabled: boolean) {
     if (!selected.length) {
-      notify('请先勾选规格')
+      notify('请先勾选选项')
       return
     }
     selected.forEach((id) => updateSpec(id, { enabled }))
-    notify(enabled ? `已批量启用 ${selected.length} 个规格` : `已批量停用 ${selected.length} 个规格`)
+    notify(enabled ? `已批量启用 ${selected.length} 项` : `已批量停用 ${selected.length} 项`)
     clear()
   }
 
@@ -696,7 +966,7 @@ export function SpecsPage() {
     <>
       <PageHeader
         title="规格管理"
-        desc="按门店维护规格选项（如标准份、加肉、微辣），菜品可多选关联。"
+        desc="门店常用规格选项库。真正的单选/多选规格在「菜品管理」里按单品配置，可从本库快速添加选项。"
         extra={
           <button
             className="btn"
@@ -713,7 +983,7 @@ export function SpecsPage() {
               })
             }}
           >
-            新增规格
+            新增选项
           </button>
         }
       />
@@ -726,7 +996,7 @@ export function SpecsPage() {
               </option>
             ))}
           </select>
-          <input placeholder="搜索规格" value={kw} onChange={(e) => setKw(e.target.value)} />
+          <input placeholder="搜索选项" value={kw} onChange={(e) => setKw(e.target.value)} />
           <button className="btn ghost" type="button" disabled={!selected.length} onClick={() => batchEnable(true)}>
             批量启用
           </button>
@@ -750,21 +1020,11 @@ export function SpecsPage() {
                     aria-label="全选"
                   />
                 </th>
-                <th>规格名称</th>
-                <th>加价</th>
+                <th>选项名称</th>
+                <th>默认加价</th>
                 <th>状态</th>
-                <th>关联菜品数</th>
-                <th>
-                  操作
-                  <i
-                    className="tip-icon"
-                    tabIndex={0}
-                    data-tip="规格的停用/启用不受关联菜品是否上架影响。"
-                    aria-label="操作说明"
-                  >
-                    ?
-                  </i>
-                </th>
+                <th>菜品中出现</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -785,7 +1045,7 @@ export function SpecsPage() {
                       {s.enabled ? '启用' : '停用'}
                     </StatusTag>
                   </td>
-                  <td>{products.filter((p) => p.specIds.includes(s.id)).length}</td>
+                  <td>{usageCount(s.name)}</td>
                   <td className="ops">
                     <button className="link-btn" type="button" onClick={() => setForm({ ...s })}>
                       编辑
@@ -806,7 +1066,7 @@ export function SpecsPage() {
               {!list.length ? (
                 <tr>
                   <td colSpan={6}>
-                    <div className="empty-block">该门店暂无规格</div>
+                    <div className="empty-block">该门店暂无选项，可先添加常用项供菜品配置时选用</div>
                   </td>
                 </tr>
               ) : null}
@@ -817,7 +1077,7 @@ export function SpecsPage() {
 
       <Modal
         open={!!form}
-        title={specs.some((s) => s.id === form?.id) ? '编辑规格' : '新增规格'}
+        title={specs.some((s) => s.id === form?.id) ? '编辑选项' : '新增选项'}
         onClose={() => setForm(null)}
         footer={
           <>
@@ -829,11 +1089,11 @@ export function SpecsPage() {
               type="button"
               onClick={() => {
                 if (!form?.name) {
-                  notify('请填写规格名称')
+                  notify('请填写选项名称')
                   return
                 }
                 saveSpec(form)
-                notify('规格已保存')
+                notify('选项已保存')
                 setForm(null)
               }}
             >
@@ -847,10 +1107,10 @@ export function SpecsPage() {
             <Field label="门店">
               <input value={form.storeName} disabled />
             </Field>
-            <Field label="规格名称">
+            <Field label="选项名称">
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
-            <Field label="加价（元）">
+            <Field label="默认加价（元）">
               <input
                 type="number"
                 min={0}
@@ -865,7 +1125,7 @@ export function SpecsPage() {
 
       <Modal
         open={!!removeId}
-        title="删除规格"
+        title="删除选项"
         onClose={() => setRemoveId(null)}
         footer={
           <>
@@ -877,12 +1137,8 @@ export function SpecsPage() {
               type="button"
               onClick={() => {
                 if (!removeId) return
-                if (products.some((p) => p.specIds.includes(removeId) && p.specIds.length <= 1)) {
-                  notify('仍有菜品仅关联该规格，请先调整菜品后再删')
-                  return
-                }
                 removeSpec(removeId)
-                notify('规格已删除')
+                notify('选项已删除（不影响已配置在菜品上的规格）')
                 setRemoveId(null)
               }}
             >
@@ -891,7 +1147,9 @@ export function SpecsPage() {
           </>
         }
       >
-        <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>确认删除该规格？已关联菜品将移除该规格选项。</p>
+        <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
+          仅从选项库移除。已写入各菜品规格组的选项不会被自动删除。
+        </p>
       </Modal>
     </>
   )

@@ -6,6 +6,7 @@ function normalizeTicket(raw: Ticket & { status?: string; repliedAt?: string; ph
   return {
     ...raw,
     phone: raw.phone ?? '',
+    orderId: raw.orderId || undefined,
     status: raw.status === 'done' ? 'done' : 'open',
     repliedAt: raw.repliedAt ?? '',
   }

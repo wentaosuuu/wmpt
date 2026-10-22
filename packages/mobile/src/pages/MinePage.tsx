@@ -39,10 +39,6 @@ export function MinePage() {
           <span>我的账单</span>
           <span className="muted">餐饮消费 ›</span>
         </Link>
-        <Link className="entry" to="/address">
-          <span>收货地址</span>
-          <span className="muted">›</span>
-        </Link>
         <Link className="entry" to="/service">
           <span>联系客服</span>
           <span className="muted">›</span>

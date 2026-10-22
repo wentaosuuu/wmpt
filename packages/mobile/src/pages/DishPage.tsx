@@ -1,7 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { DishCover } from '../components/DishCover'
 import { NavBar } from '../components/ui'
+import {
+  defaultSelection,
+  selectionExtra,
+  selectionLabel,
+  selectionValid,
+  toggleOption,
+  type SpecSelection,
+} from '../lib/specGroups'
 import { dishById, money, storeById } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
@@ -12,9 +20,15 @@ export function DishPage() {
   const { addToCart, storeConfigRev } = useApp()
   void storeConfigRev
   const navigate = useNavigate()
-  const [spec, setSpec] = useState(dish?.specs[0]?.name ?? '')
-  const [remark, setRemark] = useState('')
-  const extra = dish?.specs.find((s) => s.name === spec)?.extra ?? 0
+  const groups = dish?.specGroups ?? []
+  const [sel, setSel] = useState<SpecSelection>(() => defaultSelection(groups))
+
+  useEffect(() => {
+    setSel(defaultSelection(groups))
+  }, [id])
+
+  const extra = selectionExtra(groups, sel)
+  const canAdd = selectionValid(groups, sel)
 
   if (!dish || !store) {
     return (
@@ -44,54 +58,67 @@ export function DishPage() {
             </div>
           </div>
         </div>
-        <div className="card dish-option-card">
-          <h4>规格</h4>
-          <div className="specs">
-            {dish.specs.map((s) => (
-              <button
-                key={s.name}
-                className={`spec ${spec === s.name ? 'on' : ''}`}
-                type="button"
-                onClick={() => setSpec(s.name)}
-              >
-                {s.name}
-                {s.extra ? ` +${money(s.extra)}` : ''}
-              </button>
-            ))}
+        {groups.map((g) => {
+          const picked = sel[g.id] ?? []
+          return (
+            <div key={g.id} className="card dish-option-card">
+              <div className="spec-group-title">
+                <h4>{g.name}</h4>
+                <span className="spec-group-hint">
+                  {g.mode === 'single' ? '单选' : '多选'}
+                  {g.required ? ' · 必选' : ' · 可选'}
+                </span>
+              </div>
+              <div className="specs">
+                {g.options.map((o) => {
+                  const on = picked.includes(o.id)
+                  return (
+                    <button
+                      key={o.id}
+                      className={`spec ${on ? 'on' : ''}`}
+                      type="button"
+                      onClick={() => setSel((prev) => toggleOption(groups, prev, g.id, o.id))}
+                    >
+                      {o.name}
+                      {o.extra ? ` +${money(o.extra)}` : ''}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+        {!groups.length ? (
+          <div className="card dish-option-card">
+            <p className="muted">暂无可选规格</p>
           </div>
-          {!dish.specs.length ? <p className="muted">暂无可选规格</p> : null}
-        </div>
-        <div className="card dish-option-card">
-          <h4>备注</h4>
-          <textarea
-            className="remark-input"
-            rows={2}
-            maxLength={80}
-            placeholder="选填，如少油、不要香菜、去冰等"
-            value={remark}
-            onChange={(e) => setRemark(e.target.value)}
-          />
-        </div>
+        ) : null}
       </div>
       <div className="dish-page-footer">
         <button
           className="btn block"
           type="button"
-          disabled={dish.soldOut || store.status === 'closed' || !spec}
+          disabled={dish.soldOut || store.status === 'closed' || !canAdd}
           onClick={() => {
             addToCart({
               storeId: dish.storeId,
               dishId: dish.id,
               name: dish.name,
-              spec,
-              remark: remark.trim(),
+              spec: selectionLabel(groups, sel),
+              remark: '',
               price: dish.price + extra,
               packingFee: 0,
             })
             navigate(`/store/${dish.storeId}`)
           }}
         >
-          {dish.soldOut ? '已售罄' : store.status === 'closed' ? '门店歇业中' : '加入购物车'}
+          {dish.soldOut
+            ? '已售罄'
+            : store.status === 'closed'
+              ? '门店歇业中'
+              : !canAdd
+                ? '请完成必选规格'
+                : '加入购物车'}
         </button>
       </div>
     </section>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { OrderStatusGuide } from '../components/OrderStatusGuide'
 import { Empty, OrderNo, Tag } from '../components/ui'
 import { money, statusText } from '../lib/utils'
 import { useApp } from '../store/AppStore'
@@ -7,7 +8,7 @@ import { useApp } from '../store/AppStore'
 const tabs = [
   { id: 'all', label: '全部' },
   { id: 'pending_pay', label: '待付款' },
-  { id: 'ing', label: '配送中' },
+  { id: 'ing', label: '进行中' },
   { id: 'done', label: '已完成' },
 ]
 
@@ -15,6 +16,7 @@ export function OrdersPage() {
   const { orders } = useApp()
   const [tab, setTab] = useState('all')
   const [kw, setKw] = useState('')
+  const [showGuide, setShowGuide] = useState(false)
 
   const list = useMemo(() => {
     return orders.filter((o) => {
@@ -35,8 +37,11 @@ export function OrdersPage() {
 
   return (
     <section className="page orders-page">
-      <header className="page-title-bar">
+      <header className="page-title-bar orders-title-bar">
         <h1>订单记录</h1>
+        <button className="orders-guide-btn" type="button" onClick={() => setShowGuide(true)}>
+          状态说明
+        </button>
       </header>
       <div className="seg underline">
         {tabs.map((t) => (
@@ -80,6 +85,7 @@ export function OrdersPage() {
         </Link>
       ))}
       {!list.length ? <Empty text="暂无消费订单记录~" to="/shops" action="去点外卖" /> : null}
+      {showGuide ? <OrderStatusGuide onClose={() => setShowGuide(false)} /> : null}
     </section>
   )
 }

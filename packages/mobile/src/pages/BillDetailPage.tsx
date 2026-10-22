@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { MoneyRow, NavBar, OrderNo, Tag } from '../components/ui'
+import { MoneyRow, NavBar, Tag } from '../components/ui'
 import { money, statusText } from '../lib/utils'
 import { useApp } from '../store/AppStore'
 
@@ -55,11 +55,11 @@ export function BillDetailPage() {
           </div>
           <div>
             <span>订单编号</span>
-            <OrderNo id={order.id} className="detail" />
+            <b>{order.id}</b>
           </div>
           {order.tradeNo ? (
             <div>
-              <span>支付流水号</span>
+              <span>流水号</span>
               <b>{order.tradeNo}</b>
             </div>
           ) : null}
