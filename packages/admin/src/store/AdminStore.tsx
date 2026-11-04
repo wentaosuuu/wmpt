@@ -147,6 +147,7 @@ function formatMerchantField(key: keyof Merchant, value: Merchant[keyof Merchant
     const map: Record<string, string> = {
       valid: '有效',
       expiring: '即将到期',
+      expired: '已过期',
       pending: '待审',
       rejected: '已驳回',
     }

@@ -18,7 +18,7 @@ export type Merchant = {
   contact: string
   phone: string
   hours: string
-  qualStatus: 'valid' | 'expiring' | 'pending' | 'rejected'
+  qualStatus: 'valid' | 'expiring' | 'expired' | 'pending' | 'rejected'
   license: string
   expireAt: string
   /** 门牌照片（data URL 或图片地址），移动端列表/详情展示 */

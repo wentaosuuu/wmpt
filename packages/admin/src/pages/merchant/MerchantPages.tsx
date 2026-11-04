@@ -18,6 +18,11 @@ import {
   streetsOf,
 } from '../../data/regionTree'
 import { joinHours, splitHours } from '../../lib/options'
+import {
+  QUAL_STATUS_LABEL,
+  qualStatusTone,
+  resolveQualStatus,
+} from '../../lib/qualStatus'
 import { useAdmin } from '../../store/AdminStore'
 import type { Merchant, StoreApplication, StoreAttachment } from '../../types'
 
@@ -634,7 +639,7 @@ export function StoresPage() {
   } = useAdmin()
   const [kw, setKw] = useState('')
   const [current, setCurrent] = useState<Merchant | null>(null)
-  const [mode, setMode] = useState<'view' | 'edit' | 'remind' | 'changelog' | null>(null)
+  const [mode, setMode] = useState<'view' | 'edit' | 'changelog' | null>(null)
   const [form, setForm] = useState<Merchant | null>(null)
   const [editStart, setEditStart] = useState('10:00')
   const [editEnd, setEditEnd] = useState('20:00')
@@ -692,6 +697,7 @@ export function StoresPage() {
             </thead>
             <tbody>
               {list.map((m) => {
+                const qs = resolveQualStatus(m.expireAt)
                 return (
                   <tr key={m.id}>
                     <td>
@@ -725,25 +731,7 @@ export function StoresPage() {
                     <td>{m.hours}</td>
                     <td>¥{(m.deposit || 0).toLocaleString('zh-CN')}</td>
                     <td>
-                      <StatusTag
-                        tone={
-                          m.qualStatus === 'valid'
-                            ? 'success'
-                            : m.qualStatus === 'expiring'
-                              ? 'warning'
-                              : m.qualStatus === 'rejected'
-                                ? 'danger'
-                                : 'info'
-                        }
-                      >
-                        {m.qualStatus === 'valid'
-                          ? '有效'
-                          : m.qualStatus === 'expiring'
-                            ? '即将到期'
-                            : m.qualStatus === 'rejected'
-                              ? '已驳回'
-                              : '待审'}
-                      </StatusTag>
+                      <StatusTag tone={qualStatusTone(qs)}>{QUAL_STATUS_LABEL[qs]}</StatusTag>
                       <span className="sub">{m.expireAt}</span>
                     </td>
                     <td className="ops">
@@ -771,18 +759,6 @@ export function StoresPage() {
                       >
                         编辑
                       </button>
-                      {m.qualStatus === 'expiring' ? (
-                        <button
-                          className="link-btn"
-                          type="button"
-                          onClick={() => {
-                            setCurrent(m)
-                            setMode('remind')
-                          }}
-                        >
-                          到期提醒
-                        </button>
-                      ) : null}
                       <button
                         className="link-btn"
                         type="button"
@@ -966,7 +942,9 @@ export function StoresPage() {
                   setForm({
                     ...form,
                     expireAt: e.target.value,
-                    qualStatus: e.target.value ? 'valid' : form.qualStatus,
+                    qualStatus: e.target.value
+                      ? resolveQualStatus(e.target.value)
+                      : form.qualStatus,
                   })
                 }
               />
@@ -1105,34 +1083,6 @@ export function StoresPage() {
             </div>
           </div>
         ) : null}
-      </Modal>
-
-      <Modal
-        open={mode === 'remind' && !!current}
-        title="发送到期提醒"
-        onClose={() => setMode(null)}
-        footer={
-          <>
-            <button className="btn ghost" type="button" onClick={() => setMode(null)}>
-              取消
-            </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                notify(`已向 ${current?.contact} 发送资质到期提醒`)
-                setMode(null)
-              }}
-            >
-              确认发送
-            </button>
-          </>
-        }
-      >
-        <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
-          将提醒「{current?.name}」联系人 {current?.contact}，资质将于 {current?.expireAt}{' '}
-          到期。可在编辑中更新营业执照号与到期日。
-        </p>
       </Modal>
 
       <Modal
