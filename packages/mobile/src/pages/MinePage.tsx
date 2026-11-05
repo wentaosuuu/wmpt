@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom'
 import { useApp } from '../store/AppStore'
 
 export function MinePage() {
-  const { user, orders, addresses } = useApp()
-  const refunding = orders.filter((o) => o.status === 'refunding').length
+  const { user, orders, addresses, tickets } = useApp()
+  const openTickets = tickets.filter(
+    (t) => t.status === 'open' && (!user?.phone || t.phone === user.phone),
+  ).length
 
   return (
     <section className="page mine-page">
@@ -20,8 +22,8 @@ export function MinePage() {
           <b>{orders.length}</b>
           <span>全部订单</span>
         </Link>
-        <Link to="/service">
-          <b>{refunding}</b>
+        <Link to="/tickets">
+          <b>{openTickets}</b>
           <span>售后处理中</span>
         </Link>
         <Link to="/address">
@@ -38,6 +40,10 @@ export function MinePage() {
         <Link className="entry" to="/bills">
           <span>我的账单</span>
           <span className="muted">餐饮消费 ›</span>
+        </Link>
+        <Link className="entry" to="/tickets">
+          <span>我的工单</span>
+          <span className="muted">{openTickets ? `${openTickets} 处理中 ›` : '›'}</span>
         </Link>
         <Link className="entry" to="/service">
           <span>联系客服</span>

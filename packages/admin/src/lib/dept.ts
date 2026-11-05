@@ -1,6 +1,6 @@
 import type { SysDept } from '../types'
 
-/** 部门层级：1 市 → 2 区 → 3 门店/商家 */
+/** 部门最多两级：1 云宝宝（平台）→ 2 门店 */
 export function deptDepth(depts: SysDept[], id: string | null | undefined): number {
   let depth = 0
   let cur = id ? depts.find((d) => d.id === id) : undefined
@@ -13,8 +13,7 @@ export function deptDepth(depts: SysDept[], id: string | null | undefined): numb
 }
 
 export function deptLevelLabel(depth: number) {
-  if (depth <= 1) return '市'
-  if (depth === 2) return '区'
+  if (depth <= 1) return '平台'
   return '门店'
 }
 
@@ -28,10 +27,10 @@ export function deptPath(depts: SysDept[], id: string): string {
   return names.join(' / ')
 }
 
-/** 三级门店节点（所属商家下拉用） */
+/** 二级门店节点 */
 export function merchantDepts(depts: SysDept[]) {
   return depts
-    .filter((d) => d.status === 'enabled' && deptDepth(depts, d.id) === 3)
+    .filter((d) => d.status === 'enabled' && deptDepth(depts, d.id) === 2)
     .sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'zh'))
 }
 

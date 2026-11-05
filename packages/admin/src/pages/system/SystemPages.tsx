@@ -47,7 +47,7 @@ export function UsersPage() {
     <>
       <PageHeader
         title="用户管理"
-        desc="以手机号为唯一登录标识；用户挂到市/区/门店部门，并通过角色获得菜单权限。"
+        desc="以手机号为唯一登录标识；用户挂到平台或门店，并通过角色获得菜单权限。"
       />
       <Panel>
         <Toolbar>
@@ -383,13 +383,10 @@ export function DeptsPage() {
 
   return (
     <>
-      <PageHeader
-        title="部门管理"
-        desc="组织树按 市 → 区 → 门店 三级维护；三级门店名称即入驻申请中的「所属商家」选项。"
-      />
+      <PageHeader title="部门管理" />
       <Panel>
         <Toolbar>
-          <input placeholder="市 / 区 / 门店 / 负责人 / 电话" value={kw} onChange={(e) => setKw(e.target.value)} />
+          <input placeholder="名称 / 负责人 / 电话" value={kw} onChange={(e) => setKw(e.target.value)} />
           <button
             className="btn"
             type="button"
@@ -415,6 +412,7 @@ export function DeptsPage() {
             <thead>
               <tr>
                 <th>名称</th>
+                <th>层级</th>
                 <th>上级</th>
                 <th>负责人</th>
                 <th>电话</th>
@@ -429,6 +427,7 @@ export function DeptsPage() {
                 return (
                   <tr key={d.id}>
                     <td style={{ paddingLeft: 8 + (depth - 1) * 20 }}>{d.name}</td>
+                    <td>{deptLevelLabel(depth)}</td>
                     <td>{depts.find((x) => x.id === d.parentId)?.name ?? '-'}</td>
                     <td>{d.leader}</td>
                     <td>{d.phone}</td>
@@ -465,7 +464,7 @@ export function DeptsPage() {
               })}
               {!list.length ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="empty-block">暂无部门</div>
                   </td>
                 </tr>
@@ -494,8 +493,13 @@ export function DeptsPage() {
                   return
                 }
                 const nextDepth = form.parentId ? deptDepth(depts, form.parentId) + 1 : 1
-                if (nextDepth > 3) {
-                  notify('最多三级：市 → 区 → 门店')
+                const otherRoot = depts.find((d) => !d.parentId && d.id !== form.id)
+                if (!form.parentId && otherRoot) {
+                  notify('一级部门已有云宝宝，新部门请挂到其下作为门店')
+                  return
+                }
+                if (nextDepth > 2) {
+                  notify('最多两级：云宝宝下挂门店')
                   return
                 }
                 saveDept(form)
@@ -513,32 +517,24 @@ export function DeptsPage() {
             <Field label="名称">
               <input
                 value={form.name}
-                placeholder={
-                  form.parentId
-                    ? deptDepth(depts, form.parentId) === 1
-                      ? '如：青秀区'
-                      : '如：南门食堂 · 外卖档口'
-                    : '如：南宁市'
-                }
+                placeholder={form.parentId ? '如：南门食堂 · 外卖档口' : '云宝宝'}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </Field>
-            <Field label="上级（市下挂区，区下挂门店）">
+            <Field label="上级">
               <select
                 value={form.parentId ?? ''}
+                disabled={!form.parentId && depts.some((d) => d.id === form.id && !d.parentId)}
                 onChange={(e) => setForm({ ...form, parentId: e.target.value || null })}
               >
-                <option value="">无（一级：市）</option>
+                {!form.parentId ? <option value="">无（一级：云宝宝）</option> : null}
                 {sortDeptsTree(depts)
-                  .filter((d) => d.id !== form.id && deptDepth(depts, d.id) < 3)
-                  .map((d) => {
-                    const depth = deptDepth(depts, d.id)
-                    return (
-                      <option key={d.id} value={d.id}>
-                        {deptLevelLabel(depth)} · {d.name}
-                      </option>
-                    )
-                  })}
+                  .filter((d) => d.id !== form.id && deptDepth(depts, d.id) === 1)
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {deptLevelLabel(1)} · {d.name}
+                    </option>
+                  ))}
               </select>
             </Field>
             <div className="form-grid">
@@ -556,8 +552,9 @@ export function DeptsPage() {
               </Field>
             </div>
             <p style={{ margin: '8px 0 0', fontSize: 12, color: '#86909c' }}>
-              当前将保存为「
-              {deptLevelLabel(form.parentId ? deptDepth(depts, form.parentId) + 1 : 1)}」级节点
+              将保存为「
+              {deptLevelLabel(form.parentId ? deptDepth(depts, form.parentId) + 1 : 1)}
+              」。一级云宝宝可查看全部门店；二级门店之间数据不互通。
             </p>
           </>
         ) : null}

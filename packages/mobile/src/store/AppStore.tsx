@@ -12,7 +12,7 @@ import { applyDishDescriptions } from '../lib/dishDescSync'
 import { applyDishPhotos } from '../lib/dishPhotoSync'
 import { applyStoreMinOrders } from '../lib/minOrderSync'
 import { RIDER_AT_STORE, RIDER_NAME, RIDER_TO_STORE } from '../lib/riderStage'
-import { submitTicket } from '../lib/ticketApi'
+import { fetchTickets, submitTicket } from '../lib/ticketApi'
 import {
   canApplyRefund,
   canCancel,
@@ -24,11 +24,64 @@ import {
   nextTradeNo,
   nowLabel,
 } from '../lib/utils'
-import type { Address, AppRole, CartItem, Order, OrderStatus, PayChannel, TicketType, User } from '../types'
+import type {
+  Address,
+  AppRole,
+  CartItem,
+  Order,
+  OrderStatus,
+  PayChannel,
+  Ticket,
+  TicketType,
+  User,
+} from '../types'
 
 type Toast = { id: number; text: string }
 
 const RIDER_PROFILE = { name: RIDER_NAME, phone: '13900001111', location: '园区配送站' }
+
+/** 本地演示工单：API 不可用时兜底，保证「售后处理中」有数据 */
+const seedTickets: Ticket[] = [
+  {
+    id: 'CS001',
+    type: 'consult',
+    orderId: 'WMPT20260915000001',
+    user: '张晓楠',
+    phone: '13800138000',
+    content: '骑手在西门岗亭，如何交接？',
+    status: 'done',
+    handler: '客服-小梁',
+    result: '已告知用户下楼取餐，订单正常送达',
+    createdAt: '2026-09-15 11:50',
+    repliedAt: '2026-09-15 11:58',
+  },
+  {
+    id: 'CS003',
+    type: 'consult',
+    orderId: 'WMPT20261013000009',
+    user: '张晓楠',
+    phone: '13800138000',
+    content: '取消申请提交后很久没动静，请问商家大概多久审核？配送还在路上。',
+    status: 'open',
+    handler: '-',
+    result: '',
+    createdAt: '2026-10-13 11:20',
+    repliedAt: '',
+  },
+  {
+    id: 'TS003',
+    type: 'complaint',
+    orderId: 'WMPT20261012000018',
+    user: '张晓楠',
+    phone: '13800138000',
+    content: '少了一份米饭，已申请售后退款，希望尽快处理并补偿。',
+    status: 'open',
+    handler: '-',
+    result: '',
+    createdAt: '2026-10-12 19:25',
+    repliedAt: '',
+  },
+]
 
 type AppContextValue = {
   user: User | null
@@ -38,6 +91,8 @@ type AppContextValue = {
   cart: CartItem[]
   addresses: Address[]
   orders: Order[]
+  /** 当前账号相关的客服工单（联系客服提交） */
+  tickets: Ticket[]
   toasts: Toast[]
   /** 门店起送费等配置版本，变化时列表/结算页应刷新 */
   storeConfigRev: number
@@ -115,18 +170,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [addresses, setAddresses] = useState<Address[]>(defaultAddresses)
   const [orders, setOrders] = useState<Order[]>(seedOrders)
+  const [tickets, setTickets] = useState<Ticket[]>(seedTickets)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [storeConfigRev, setStoreConfigRev] = useState(0)
 
   useEffect(() => {
     let alive = true
     const pull = async () => {
-      const [minChanged, photoChanged, descChanged] = await Promise.all([
+      const [minChanged, photoChanged, descChanged, remoteTickets] = await Promise.all([
         applyStoreMinOrders(),
         applyDishPhotos(),
         applyDishDescriptions(),
+        fetchTickets(),
       ])
       if (alive && (minChanged || photoChanged || descChanged)) setStoreConfigRev((n) => n + 1)
+      if (alive && remoteTickets.length) {
+        const phone = currentUser.phone
+        const mine = remoteTickets.filter((t) => t.phone === phone)
+        setTickets((prev) => {
+          const map = new Map<string, Ticket>()
+          for (const t of [...mine, ...prev]) map.set(t.id, t)
+          return [...map.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+        })
+      }
     }
     void pull()
     const onVisible = () => {
@@ -401,19 +467,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const typeLabel = type === 'complaint' ? '投诉' : '咨询'
       const stamp = nowLabel()
       const ticketId = `${type === 'complaint' ? 'TS' : 'CS'}${Date.now().toString().slice(-6)}`
-      void submitTicket({
+      const ticket: Ticket = {
         id: ticketId,
         type,
         user: user?.name || '消费者',
         phone: user?.phone || '',
-        content: orderId ? `【订单 ${orderId}】${content}` : content,
+        content,
         status: 'open',
         handler: '-',
         result: '',
         createdAt: stamp,
         repliedAt: '',
         orderId,
-      })
+      }
+      setTickets((prev) => [ticket, ...prev.filter((t) => t.id !== ticket.id)])
+      void submitTicket(ticket)
       if (orderId) {
         setOrders((prev) =>
           prev.map((o) =>
@@ -655,6 +723,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       cart,
       addresses,
       orders,
+      tickets,
       toasts,
       storeConfigRev,
       setRole,
@@ -692,6 +761,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       cart,
       addresses,
       orders,
+      tickets,
       toasts,
       storeConfigRev,
       setRole,

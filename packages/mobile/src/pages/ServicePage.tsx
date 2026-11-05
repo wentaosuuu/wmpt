@@ -22,7 +22,7 @@ export function ServicePage() {
       <NavBar title="联系客服" />
       <div className="card">
         <p>服务时间 09:00-21:00</p>
-        <p className="muted">提交后可在订单详情查看售后进度与处理结果。</p>
+        <p className="muted">提交后可在「我的 · 售后处理中」查看工单列表与处理结果。</p>
         {order ? (
           <p>关联订单编号 {order.id}</p>
         ) : (
@@ -64,7 +64,7 @@ export function ServicePage() {
             return
           }
           void addTicket(id, text, type)
-          navigate(id ? `/order/${id}` : '/mine')
+          navigate('/tickets')
         }}
       >
         提交

@@ -3485,3 +3485,164 @@ img.store-mini-logo {
   padding: 1px 6px;
   font-weight: 500;
 }
+
+.aftersale-page .aftersale-tabs {
+  margin: 0 16px;
+}
+
+.aftersale-tip {
+  margin: 8px 16px 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.aftersale-card {
+  display: block;
+  margin: 10px 16px 0;
+  padding: 14px;
+  background: #fff;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.aftersale-card:active {
+  background: #f7f8fa;
+}
+
+.aftersale-card-hd,
+.aftersale-card-ft {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.aftersale-store {
+  margin: 8px 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.aftersale-items {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.aftersale-card-ft {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.aftersale-card-ft b {
+  color: #1f2329;
+  font-size: 14px;
+}
+
+.aftersale-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #d46b08;
+}
+
+.aftersale-status-card {
+  text-align: center;
+  padding: 20px 16px;
+}
+
+.aftersale-status-card .tag {
+  margin: 6px 0 8px;
+}
+
+.aftersale-status-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.aftersale-amount {
+  display: block;
+  font-size: 28px;
+  color: var(--danger);
+  margin-bottom: 4px;
+}
+
+.aftersale-actions {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 24px;
+}
+
+.ticket-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ticket-detail-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-detail-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticket-detail-content {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #1f2329;
+}
+
+.ticket-detail-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7f8fa;
+  text-decoration: none;
+  color: inherit;
+  font-size: 13px;
+}
+
+.ticket-detail-order em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ticket-detail-order > span:last-child {
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.ticket-detail-reply {
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+}
+
+.ticket-detail-reply strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.ticket-detail-reply p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}

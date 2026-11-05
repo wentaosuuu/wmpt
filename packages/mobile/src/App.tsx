@@ -23,6 +23,8 @@ import { RiderTasksPage } from './pages/rider/RiderTasksPage'
 import { ServicePage } from './pages/ServicePage'
 import { ShopsPage } from './pages/ShopsPage'
 import { StorePage } from './pages/StorePage'
+import { TicketDetailPage } from './pages/TicketDetailPage'
+import { TicketListPage } from './pages/TicketListPage'
 import { TrackPage } from './pages/TrackPage'
 import { AppProvider } from './store/AppStore'
 import './App.css'
@@ -61,6 +63,9 @@ function App() {
             <Route path="bills/:id" element={<BillDetailPage />} />
             <Route path="service" element={<ServicePage />} />
             <Route path="service/:id" element={<ServicePage />} />
+            <Route path="tickets" element={<TicketListPage />} />
+            <Route path="tickets/:id" element={<TicketDetailPage />} />
+            <Route path="aftersale" element={<Navigate to="/tickets" replace />} />
             <Route path="privacy" element={<PrivacyPage />} />
             <Route path="r/income" element={<RiderIncomePage />} />
           </Route>

@@ -139,12 +139,18 @@ export type TicketType = 'consult' | 'complaint'
 export type Ticket = {
   id: string
   type: TicketType
+  /** 关联订单号；未从订单发起的咨询可为空 */
   orderId?: string
+  user: string
+  phone: string
   content: string
-  /** open=待处理，done=已完结 */
+  /** open=处理中，done=已完结 */
   status: 'open' | 'done'
-  reply: string
+  handler: string
+  /** 客服回复结果，处理中为空 */
+  result: string
   createdAt: string
+  repliedAt: string
 }
 
 export type Order = {
