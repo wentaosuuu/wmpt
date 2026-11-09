@@ -34,6 +34,11 @@ export function merchantDepts(depts: SysDept[]) {
     .sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, 'zh'))
 }
 
+/** 某门店是否已被其他部门绑定 */
+export function storeBoundByOther(depts: SysDept[], storeId: string, excludeDeptId?: string) {
+  return depts.some((d) => d.storeId === storeId && d.id !== excludeDeptId)
+}
+
 export function sortDeptsTree(depts: SysDept[]) {
   const byParent = new Map<string | null, SysDept[]>()
   for (const d of depts) {

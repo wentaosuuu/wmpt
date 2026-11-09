@@ -1901,7 +1901,7 @@ export const pilots: Pilot[] = [
   { id: 'p2', unit: '人才公寓', building: '1-3 号楼', pickup: '3 号楼门厅', hours: '10:00-21:00', enabled: true },
 ]
 
-/** 部门两级：云宝宝（平台，可看全部门店）→ 具体门店（门店之间数据不互通） */
+/** 部门两级：云宝宝（平台，可看全部门店）→ 具体门店（绑定门店，数据不互通） */
 export const depts: SysDept[] = [
   {
     id: 'd-root',
@@ -1920,6 +1920,8 @@ export const depts: SysDept[] = [
     phone: '13800001001',
     status: 'enabled',
     sort: 1,
+    storeId: 's1',
+    storeName: '南门食堂 · 外卖档口',
   },
   {
     id: 'd-s2',
@@ -1929,6 +1931,8 @@ export const depts: SysDept[] = [
     phone: '13800001002',
     status: 'enabled',
     sort: 2,
+    storeId: 's2',
+    storeName: '桂香米粉馆',
   },
   {
     id: 'd-s3',
@@ -1938,6 +1942,8 @@ export const depts: SysDept[] = [
     phone: '13800001003',
     status: 'enabled',
     sort: 3,
+    storeId: 's3',
+    storeName: '轻食沙拉工坊 · 科研楼店',
   },
   {
     id: 'd-s5',
@@ -1947,6 +1953,8 @@ export const depts: SysDept[] = [
     phone: '13800001005',
     status: 'enabled',
     sort: 4,
+    storeId: 's5',
+    storeName: '一点点奶茶',
   },
   {
     id: 'd-s6',
@@ -1956,6 +1964,8 @@ export const depts: SysDept[] = [
     phone: '13800001006',
     status: 'enabled',
     sort: 5,
+    storeId: 's6',
+    storeName: '蜜桃甜品屋',
   },
   {
     id: 'd-s7',
@@ -1965,6 +1975,8 @@ export const depts: SysDept[] = [
     phone: '13800001007',
     status: 'enabled',
     sort: 6,
+    storeId: 's7',
+    storeName: '老友粉世家',
   },
 ]
 

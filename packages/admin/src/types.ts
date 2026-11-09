@@ -315,6 +315,12 @@ export type SysDept = {
   phone: string
   status: 'enabled' | 'disabled'
   sort: number
+  /**
+   * 绑定门店（仅门店级部门）。
+   * 平台部门不绑定：可看全部门店；门店部门用户仅可见/操作此门店。
+   */
+  storeId?: string
+  storeName?: string
 }
 
 export type SysRole = {

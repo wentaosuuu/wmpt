@@ -7,6 +7,7 @@ import {
   deptLevelLabel,
   merchantDepts,
   sortDeptsTree,
+  storeBoundByOther,
 } from '../../lib/dept'
 import type { CuisineCategory, SysDept, SysRole, SysUser } from '../../types'
 
@@ -365,45 +366,118 @@ export function UsersPage() {
 }
 
 export function DeptsPage() {
-  const { depts, saveDept, updateDept, notify } = useAdmin()
+  const { depts, merchants, sysUsers, saveDept, updateDept, notify } = useAdmin()
   const [kw, setKw] = useState('')
   const [form, setForm] = useState<SysDept | null>(null)
   const [current, setCurrent] = useState<SysDept | null>(null)
   const [mode, setMode] = useState<'edit' | 'status' | null>(null)
 
+  const stores = useMemo(
+    () => merchants.filter((m) => m.status === 'approved'),
+    [merchants],
+  )
   const tree = useMemo(() => sortDeptsTree(depts), [depts])
   const list = useMemo(
     () =>
       tree.filter(
-        (d) => d.name.includes(kw) || d.leader.includes(kw) || d.phone.includes(kw),
+        (d) =>
+          d.name.includes(kw) ||
+          d.leader.includes(kw) ||
+          d.phone.includes(kw) ||
+          (d.storeName || '').includes(kw),
       ),
     [tree, kw],
   )
   const rootId = depts.find((d) => !d.parentId)?.id ?? null
+  const isNew = !!form && !depts.some((d) => d.id === form.id)
+  const formDepth = form
+    ? form.parentId
+      ? deptDepth(depts, form.parentId) + 1
+      : 1
+    : 1
+  const isStoreLevel = formDepth >= 2
+  const bindableStores = useMemo(() => {
+    if (!form) return stores
+    return stores.filter(
+      (s) => !storeBoundByOther(depts, s.id, form.id) || form.storeId === s.id,
+    )
+  }, [stores, depts, form])
+
+  function openCreate() {
+    const siblings = depts.filter((d) => d.parentId === rootId)
+    const nextSort = siblings.length ? Math.max(...siblings.map((d) => d.sort)) + 1 : 1
+    setForm({
+      id: `d${Date.now()}`,
+      name: '',
+      parentId: rootId,
+      leader: '',
+      phone: '',
+      status: 'enabled',
+      sort: nextSort,
+      storeId: '',
+      storeName: '',
+    })
+    setMode('edit')
+  }
+
+  function save() {
+    if (!form) return
+    if (!form.name.trim()) {
+      notify('请填写名称')
+      return
+    }
+    const nextDepth = form.parentId ? deptDepth(depts, form.parentId) + 1 : 1
+    const otherRoot = depts.find((d) => !d.parentId && d.id !== form.id)
+    if (!form.parentId && otherRoot) {
+      notify('一级部门已有云宝宝，新部门请挂到其下作为门店')
+      return
+    }
+    if (nextDepth > 2) {
+      notify('最多两级：云宝宝下挂门店')
+      return
+    }
+    if (nextDepth === 2) {
+      if (!form.storeId) {
+        notify('门店级部门请绑定门店')
+        return
+      }
+      if (storeBoundByOther(depts, form.storeId, form.id)) {
+        notify('该门店已被其他部门绑定')
+        return
+      }
+      const store = stores.find((s) => s.id === form.storeId)
+      saveDept({
+        ...form,
+        name: form.name.trim(),
+        storeId: store?.id,
+        storeName: store?.name,
+      })
+    } else {
+      saveDept({
+        ...form,
+        name: form.name.trim(),
+        storeId: undefined,
+        storeName: undefined,
+      })
+    }
+    notify('部门已保存')
+    setMode(null)
+  }
 
   return (
     <>
-      <PageHeader title="部门管理" />
+      <PageHeader
+        title="部门管理"
+        desc="两级组织：云宝宝（平台，可看全部门店）下挂门店部门；门店部门须绑定门店，用户仅可见/操作该门店。"
+      />
       <Panel>
         <Toolbar>
-          <input placeholder="名称 / 负责人 / 电话" value={kw} onChange={(e) => setKw(e.target.value)} />
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              const blank: SysDept = {
-                id: `d${Date.now()}`,
-                name: '',
-                parentId: rootId,
-                leader: '',
-                phone: '',
-                status: 'enabled',
-                sort: depts.length + 1,
-              }
-              setForm(blank)
-              setMode('edit')
-            }}
-          >
+          <input
+            placeholder="名称 / 绑定门店 / 负责人 / 电话"
+            value={kw}
+            onChange={(e) => setKw(e.target.value)}
+          />
+          <button className="btn" type="button" onClick={openCreate}>
             新增部门
           </button>
         </Toolbar>
@@ -413,7 +487,7 @@ export function DeptsPage() {
               <tr>
                 <th>名称</th>
                 <th>层级</th>
-                <th>上级</th>
+                <th>绑定门店</th>
                 <th>负责人</th>
                 <th>电话</th>
                 <th>排序</th>
@@ -428,9 +502,9 @@ export function DeptsPage() {
                   <tr key={d.id}>
                     <td style={{ paddingLeft: 8 + (depth - 1) * 20 }}>{d.name}</td>
                     <td>{deptLevelLabel(depth)}</td>
-                    <td>{depts.find((x) => x.id === d.parentId)?.name ?? '-'}</td>
-                    <td>{d.leader}</td>
-                    <td>{d.phone}</td>
+                    <td>{depth === 1 ? '全部（平台）' : d.storeName || '-'}</td>
+                    <td>{d.leader || '-'}</td>
+                    <td>{d.phone || '-'}</td>
                     <td>{d.sort}</td>
                     <td>
                       <StatusTag tone={d.status === 'enabled' ? 'success' : 'default'}>
@@ -452,6 +526,22 @@ export function DeptsPage() {
                         className="link-btn"
                         type="button"
                         onClick={() => {
+                          if (d.status === 'enabled') {
+                            const hasChild = depts.some(
+                              (x) => x.parentId === d.id && x.status === 'enabled',
+                            )
+                            if (hasChild) {
+                              notify('请先停用下级门店部门')
+                              return
+                            }
+                            const hasUser = sysUsers.some(
+                              (u) => u.deptId === d.id && u.status === 'enabled',
+                            )
+                            if (hasUser) {
+                              notify('该部门仍有启用中的用户，请先调整用户部门或停用用户')
+                              return
+                            }
+                          }
                           setCurrent(d)
                           setMode('status')
                         }}
@@ -476,37 +566,15 @@ export function DeptsPage() {
 
       <Modal
         open={mode === 'edit' && !!form}
-        title="部门信息"
+        title={isNew ? '新增部门' : '编辑部门'}
+        width={520}
         onClose={() => setMode(null)}
         footer={
           <>
             <button className="btn ghost" type="button" onClick={() => setMode(null)}>
               取消
             </button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                if (!form) return
-                if (!form.name) {
-                  notify('请填写名称')
-                  return
-                }
-                const nextDepth = form.parentId ? deptDepth(depts, form.parentId) + 1 : 1
-                const otherRoot = depts.find((d) => !d.parentId && d.id !== form.id)
-                if (!form.parentId && otherRoot) {
-                  notify('一级部门已有云宝宝，新部门请挂到其下作为门店')
-                  return
-                }
-                if (nextDepth > 2) {
-                  notify('最多两级：云宝宝下挂门店')
-                  return
-                }
-                saveDept(form)
-                notify('部门已保存')
-                setMode(null)
-              }}
-            >
+            <button className="btn" type="button" onClick={save}>
               保存
             </button>
           </>
@@ -514,18 +582,26 @@ export function DeptsPage() {
       >
         {form ? (
           <>
-            <Field label="名称">
+            <Field label="名称" required>
               <input
                 value={form.name}
-                placeholder={form.parentId ? '如：南门食堂 · 外卖档口' : '云宝宝'}
+                placeholder={isStoreLevel ? '如：南门食堂 · 外卖档口' : '云宝宝'}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </Field>
-            <Field label="上级">
+            <Field label="上级（云宝宝下挂门店）">
               <select
                 value={form.parentId ?? ''}
                 disabled={!form.parentId && depts.some((d) => d.id === form.id && !d.parentId)}
-                onChange={(e) => setForm({ ...form, parentId: e.target.value || null })}
+                onChange={(e) => {
+                  const parentId = e.target.value || null
+                  const depth = parentId ? deptDepth(depts, parentId) + 1 : 1
+                  setForm({
+                    ...form,
+                    parentId,
+                    ...(depth === 1 ? { storeId: '', storeName: '' } : {}),
+                  })
+                }}
               >
                 {!form.parentId ? <option value="">无（一级：云宝宝）</option> : null}
                 {sortDeptsTree(depts)
@@ -537,24 +613,78 @@ export function DeptsPage() {
                   ))}
               </select>
             </Field>
+            {isStoreLevel ? (
+              <Field label="绑定门店（数据权限：该部门用户仅可见/操作此门店）" required>
+                <select
+                  value={form.storeId || ''}
+                  onChange={(e) => {
+                    const store = stores.find((s) => s.id === e.target.value)
+                    setForm({
+                      ...form,
+                      storeId: store?.id || '',
+                      storeName: store?.name || '',
+                      name: form.name.trim() || store?.name || form.name,
+                    })
+                  }}
+                >
+                  <option value="">选择门店</option>
+                  {bindableStores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <Field label="绑定门店（数据权限：该部门用户仅可见/操作此门店）">
+                <input value="平台部门，可查看全部门店" disabled />
+              </Field>
+            )}
             <div className="form-grid">
               <Field label="负责人">
                 <input
                   value={form.leader}
+                  placeholder="负责人"
                   onChange={(e) => setForm({ ...form, leader: e.target.value })}
                 />
               </Field>
               <Field label="电话">
                 <input
                   value={form.phone}
+                  placeholder="联系电话"
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 />
               </Field>
             </div>
+            <Field label="排序">
+              <div className="dept-sort-stepper">
+                <button
+                  type="button"
+                  aria-label="减少排序"
+                  onClick={() =>
+                    setForm({ ...form, sort: Math.max(0, (Number(form.sort) || 0) - 1) })
+                  }
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.sort}
+                  onChange={(e) => setForm({ ...form, sort: Number(e.target.value) || 0 })}
+                />
+                <button
+                  type="button"
+                  aria-label="增加排序"
+                  onClick={() => setForm({ ...form, sort: (Number(form.sort) || 0) + 1 })}
+                >
+                  +
+                </button>
+              </div>
+            </Field>
             <p style={{ margin: '8px 0 0', fontSize: 12, color: '#86909c' }}>
-              将保存为「
-              {deptLevelLabel(form.parentId ? deptDepth(depts, form.parentId) + 1 : 1)}
-              」。一级云宝宝可查看全部门店；二级门店之间数据不互通。
+              当前将保存为「{deptLevelLabel(formDepth)}」级节点
+              {isStoreLevel ? '；须绑定门店，用户仅可见该门店数据' : '；可查看全部门店数据'}
             </p>
           </>
         ) : null}

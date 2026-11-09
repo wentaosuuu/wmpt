@@ -1552,3 +1552,50 @@ button.tip-icon-btn::after {
   color: #86909c;
   flex-shrink: 0;
 }
+
+.dept-sort-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
+  overflow: hidden;
+  width: fit-content;
+  background: #fff;
+}
+
+.dept-sort-stepper button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: #f7f8fa;
+  color: #4e5969;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dept-sort-stepper button:hover {
+  background: #eef0f3;
+}
+
+.dept-sort-stepper input {
+  width: 64px;
+  height: 36px;
+  border: 0;
+  border-left: 1px solid #e5e6eb;
+  border-right: 1px solid #e5e6eb;
+  text-align: center;
+  font-size: 14px;
+  outline: none;
+}
+
+.dept-sort-stepper input::-webkit-outer-spin-button,
+.dept-sort-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.dept-sort-stepper input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
