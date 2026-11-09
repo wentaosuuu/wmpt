@@ -38,6 +38,8 @@ export type SpecOption = {
   id: string
   name: string
   extra: number
+  /** 商家设置的默认项，打开菜品时预先选中 */
+  isDefault?: boolean
 }
 
 /** 单品规格组：可单选或多选 */

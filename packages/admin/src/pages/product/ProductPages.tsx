@@ -4,7 +4,9 @@ import {
   defaultSpecGroups,
   makeSpecGroup,
   makeSpecOption,
+  normalizeSpecDefaults,
   summarizeSpecGroups,
+  toggleSpecDefault,
   validateSpecGroups,
 } from '../../lib/specGroups'
 import { useAdmin } from '../../store/AdminStore'
@@ -12,14 +14,16 @@ import type { DishCategory, DishSpec, Product, SpecGroup } from '../../types'
 
 /** 单品规格组编辑器：选项只能从门店「规格选项库」弹窗勾选 */
 function SpecGroupEditor({
-  groups,
+  groups: rawGroups,
   library,
-  onChange,
+  onChange: emit,
 }: {
   groups: SpecGroup[]
   library: DishSpec[]
   onChange: (next: SpecGroup[]) => void
 }) {
+  const groups = useMemo(() => rawGroups.map(normalizeSpecDefaults), [rawGroups])
+  const onChange = (next: SpecGroup[]) => emit(next.map(normalizeSpecDefaults))
   const [pickerGroupId, setPickerGroupId] = useState<string | null>(null)
   const [pickerKw, setPickerKw] = useState('')
   const [pickerSelected, setPickerSelected] = useState<string[]>([])
@@ -49,6 +53,10 @@ function SpecGroupEditor({
 
   function addGroup() {
     onChange([...groups, makeSpecGroup('新规格组', 'single', [], true)])
+  }
+
+  function toggleDefault(groupId: string, optId: string) {
+    onChange(groups.map((g) => (g.id === groupId ? toggleSpecDefault(g, optId) : g)))
   }
 
   function removeOption(groupId: string, optId: string) {
@@ -116,7 +124,7 @@ function SpecGroupEditor({
         <div>
           <strong>规格配置</strong>
           <p className="attach-hint" style={{ margin: '4px 0 0' }}>
-            按本单品配置规格组（单选/多选）。选项须从「规格选项库」选取，不可自由填写；库内无合适项请先去选项库新增。
+            按本单品配置规格组（单选/多选）。选项须从「规格选项库」选取，不可自由填写；库内无合适项请先去选项库新增。点击选项可设为默认，用户端会预先选中。
           </p>
         </div>
         <button className="btn ghost" type="button" onClick={addGroup}>
@@ -177,9 +185,17 @@ function SpecGroupEditor({
             </div>
             <div className="spec-option-chips">
               {g.options.map((o) => (
-                <span key={o.id} className="spec-option-chip">
-                  {o.name}
-                  {o.extraPrice ? ` +¥${o.extraPrice}` : ''}
+                <span key={o.id} className={`spec-option-chip${o.isDefault ? ' is-default' : ''}`}>
+                  <button
+                    type="button"
+                    className="spec-option-chip-main"
+                    title={o.isDefault ? '默认项' : '设为默认'}
+                    onClick={() => toggleDefault(g.id, o.id)}
+                  >
+                    {o.isDefault ? <em className="spec-option-default">默认</em> : null}
+                    {o.name}
+                    {o.extraPrice ? ` +¥${o.extraPrice}` : ''}
+                  </button>
                   <button
                     type="button"
                     className="spec-option-chip-x"
@@ -943,7 +959,7 @@ export function SpecsPage() {
     `${storeId}|${kw}`,
   )
 
-  /** 选项名在本店菜品规格组中出现的次数（仅作参考，非强绑定） */
+  /** 本店菜品中引用该选项的数量；>0 时须先取消关联才能删除 */
   function usageCount(name: string) {
     return products.filter(
       (p) =>
@@ -1023,7 +1039,7 @@ export function SpecsPage() {
                 <th>选项名称</th>
                 <th>默认加价</th>
                 <th>状态</th>
-                <th>菜品中出现</th>
+                <th>关联菜品</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -1057,7 +1073,17 @@ export function SpecsPage() {
                     >
                       {s.enabled ? '停用' : '启用'}
                     </button>
-                    <button className="link-btn danger" type="button" onClick={() => setRemoveId(s.id)}>
+                    <button
+                      className="link-btn danger"
+                      type="button"
+                      onClick={() => {
+                        if (usageCount(s.name) > 0) {
+                          notify('该选项已关联菜品，请先在菜品规格中取消关联后再删除')
+                          return
+                        }
+                        setRemoveId(s.id)
+                      }}
+                    >
                       删除
                     </button>
                   </td>
@@ -1137,8 +1163,14 @@ export function SpecsPage() {
               type="button"
               onClick={() => {
                 if (!removeId) return
+                const target = specs.find((s) => s.id === removeId)
+                if (target && usageCount(target.name) > 0) {
+                  notify('该选项已关联菜品，请先在菜品规格中取消关联后再删除')
+                  setRemoveId(null)
+                  return
+                }
                 removeSpec(removeId)
-                notify('选项已删除（不影响已配置在菜品上的规格）')
+                notify('选项已删除')
                 setRemoveId(null)
               }}
             >
@@ -1148,7 +1180,7 @@ export function SpecsPage() {
         }
       >
         <p style={{ margin: 0, fontSize: 14, color: '#4e5969' }}>
-          仅从选项库移除。已写入各菜品规格组的选项不会被自动删除。
+          确认从选项库删除该选项？有关联菜品时须先取消关联才能删除。
         </p>
       </Modal>
     </>

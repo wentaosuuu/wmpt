@@ -9,8 +9,13 @@ export function summarizeSpecGroups(groups: SpecGroup[]): string {
   return groups.map((g) => g.name).join(' · ')
 }
 
-export function makeSpecOption(name: string, extraPrice = 0, id?: string): SpecOption {
-  return { id: id ?? newSpecId('so'), name, extraPrice }
+export function makeSpecOption(
+  name: string,
+  extraPrice = 0,
+  id?: string,
+  isDefault = false,
+): SpecOption {
+  return { id: id ?? newSpecId('so'), name, extraPrice, isDefault }
 }
 
 export function makeSpecGroup(
@@ -20,7 +25,32 @@ export function makeSpecGroup(
   required = mode === 'single',
   id?: string,
 ): SpecGroup {
-  return { id: id ?? newSpecId('sg'), name, mode, required, options }
+  return normalizeSpecDefaults({ id: id ?? newSpecId('sg'), name, mode, required, options })
+}
+
+/** 单选组最多一个默认项；单选必选组没有默认项时取第一项 */
+export function normalizeSpecDefaults(g: SpecGroup): SpecGroup {
+  if (g.mode === 'multi') return g
+  const first = g.options.findIndex((o) => o.isDefault)
+  const keep = first >= 0 ? first : g.required && g.options.length ? 0 : -1
+  return { ...g, options: g.options.map((o, i) => ({ ...o, isDefault: i === keep })) }
+}
+
+/** 切换选项的默认状态；单选必选组不能取消唯一的默认项 */
+export function toggleSpecDefault(g: SpecGroup, optionId: string): SpecGroup {
+  if (g.mode === 'multi') {
+    return {
+      ...g,
+      options: g.options.map((o) => (o.id === optionId ? { ...o, isDefault: !o.isDefault } : o)),
+    }
+  }
+  const target = g.options.find((o) => o.id === optionId)
+  if (!target) return g
+  if (target.isDefault) {
+    if (g.required) return g
+    return { ...g, options: g.options.map((o) => ({ ...o, isDefault: false })) }
+  }
+  return { ...g, options: g.options.map((o) => ({ ...o, isDefault: o.id === optionId })) }
 }
 
 /** 默认单品规格组（空选项，需从选项库选取） */

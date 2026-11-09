@@ -1424,6 +1424,36 @@ button.tip-icon-btn::after {
   font-size: 13px;
 }
 
+.spec-option-chip.is-default {
+  background: #1677ff;
+  color: #fff;
+}
+
+.spec-option-chip.is-default .spec-option-chip-x {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.spec-option-chip-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.spec-option-default {
+  font-style: normal;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .spec-option-chip-x {
   border: none;
   background: transparent;

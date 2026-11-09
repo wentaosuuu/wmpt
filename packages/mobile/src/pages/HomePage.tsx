@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CatIcon } from '../components/CatIcon'
 import { StoreCover } from '../components/StoreCover'
+import { Tag } from '../components/ui'
 import { useCuisineCategories } from '../hooks/useCuisineCategories'
 import { sortOptions, stores, type StoreSortKey } from '../mock'
 import { sortStores } from '../lib/storeFilter'
@@ -111,7 +112,12 @@ export function HomePage() {
                 <h4>{s.name}</h4>
                 <em>{Math.round(s.distanceKm * 1000)}m</em>
               </div>
-              <p>月售 {s.monthlySales}</p>
+              <div className="feed-meta">
+                <Tag tone={s.status === 'open' ? 'green' : 'gray'}>
+                  {s.status === 'open' ? '营业中' : '歇业中'}
+                </Tag>
+                <span>月售 {s.monthlySales}</span>
+              </div>
               <div className="feed-tags">
                 <span>起送 {money(s.minOrder)}</span>
                 <span>预估配送费 {money(s.deliveryFee)}</span>

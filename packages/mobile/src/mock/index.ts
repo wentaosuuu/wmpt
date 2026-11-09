@@ -146,7 +146,7 @@ export const stores: Store[] = [
     distanceKm: 2.8,
     rating: 4.4,
     monthlySales: 310,
-    status: 'open',
+    status: 'closed',
     minOrder: 30,
     deliveryFee: 8,
     orderPackingFee: 2,
@@ -279,7 +279,7 @@ const cupOpts = (largeExtra: number) => [
 ]
 
 const iceOpts = () => [
-  makeOption('正常冰', 0),
+  makeOption('正常冰', 0, true),
   makeOption('少冰', 0),
   makeOption('去冰', 0),
   makeOption('热饮', 0),
@@ -298,7 +298,7 @@ const dishSpecOverrides: Record<string, SpecGroup[]> = {
   d1: [
     makeGroup('份量', 'single', [
       makeOption('小份', 0),
-      makeOption('标准份', 0),
+      makeOption('标准份', 0, true),
       makeOption('加大份', 4),
     ]),
     makeGroup(
@@ -384,7 +384,7 @@ const dishSpecOverrides: Record<string, SpecGroup[]> = {
   ],
   d7b: [
     makeGroup('杯型', 'single', [makeOption('标准份', 0), makeOption('大杯', 3)]),
-    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0)]),
+    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0, true)]),
   ],
   // —— 北区烧烤 ——
   d8: [
@@ -501,20 +501,20 @@ const dishSpecOverrides: Record<string, SpecGroup[]> = {
   d12b: [
     makeGroup('杯型', 'single', cupOpts(3)),
     makeGroup('甜度', 'single', sugarOpts()),
-    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0)]),
+    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0, true)]),
     makeGroup('加料', 'multi', [makeOption('加芝士', 4), makeOption('珍珠', 2)], false),
   ],
   d12c: [
     makeGroup('杯型', 'single', cupOpts(3)),
     makeGroup('甜度', 'single', sugarOpts()),
-    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0)]),
+    makeGroup('冰量', 'single', [makeOption('少冰', 0), makeOption('去冰', 0), makeOption('正常冰', 0, true)]),
     makeGroup('加料', 'multi', [makeOption('加芦荟', 2), makeOption('椰果', 2)], false),
   ],
   // —— 北区食堂 ——
   d1c: [
     makeGroup('份量', 'single', [
       makeOption('小份', 0),
-      makeOption('标准份', 0),
+      makeOption('标准份', 0, true),
       makeOption('加大份', 4),
     ]),
     makeGroup('辣度', 'single', [makeOption('微辣', 0), makeOption('中辣', 0)], false),

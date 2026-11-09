@@ -1327,12 +1327,17 @@ const productSpecOverrides: Record<string, SpecGroup[]> = {
       makeSpecOption('中杯', 0, 'sp5a-c'),
       makeSpecOption('大杯', 2, 'sp5b1-c'),
     ]),
-    makeSpecGroup('冰量', 'single', [makeSpecOption('少冰', 0, 'sp5c'), makeSpecOption('去冰', 0, 'sp5d')], false),
+    makeSpecGroup(
+      '冰量',
+      'single',
+      [makeSpecOption('少冰', 0, 'sp5c', true), makeSpecOption('去冰', 0, 'sp5d')],
+      false,
+    ),
   ],
   d11b: [
     makeSpecGroup('辣度', 'single', [
       makeSpecOption('微辣', 0, 'sp7a'),
-      makeSpecOption('中辣', 0, 'sp7x'),
+      makeSpecOption('中辣', 0, 'sp7x', true),
       makeSpecOption('特辣', 0, 'sp7y'),
     ]),
     makeSpecGroup('份量', 'single', [

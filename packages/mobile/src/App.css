@@ -443,6 +443,15 @@ img.feed-cover {
   white-space: nowrap;
 }
 
+.feed-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .feed-body > p,
 .shop-branch,
 .shop-addr {

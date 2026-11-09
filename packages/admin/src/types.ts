@@ -122,6 +122,8 @@ export type SpecOption = {
   id: string
   name: string
   extraPrice: number
+  /** 默认项：用户端打开菜品时预先选中；单选组最多一个 */
+  isDefault?: boolean
 }
 
 /** 挂在单品上的规格组（源数据，按菜品独立配置） */
@@ -129,7 +131,7 @@ export type SpecGroup = {
   id: string
   name: string
   mode: SpecSelectMode
-  /** 是否必选；单选必选时默认选第一项，多选必选时至少选 1 项 */
+  /** 是否必选；单选必选组始终有一个默认项，多选必选时至少选 1 项 */
   required: boolean
   options: SpecOption[]
 }

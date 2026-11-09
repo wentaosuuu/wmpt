@@ -6,8 +6,8 @@ function nid(prefix: string) {
   return `${prefix}${seq}`
 }
 
-export function makeOption(name: string, extra = 0): SpecOption {
-  return { id: nid('so'), name, extra }
+export function makeOption(name: string, extra = 0, isDefault = false): SpecOption {
+  return { id: nid('so'), name, extra, isDefault }
 }
 
 export function makeGroup(
@@ -86,13 +86,16 @@ export function autoGroups(items: { name: string; extra: number }[]): SpecGroup[
 
 export type SpecSelection = Record<string, string[]>
 
+/** 按商家设置的默认项预选；单选必选组未设默认时取第一项 */
 export function defaultSelection(groups: SpecGroup[]): SpecSelection {
   const sel: SpecSelection = {}
   for (const g of groups) {
-    if (g.mode === 'single' && g.required && g.options[0]) {
-      sel[g.id] = [g.options[0].id]
+    const defaults = g.options.filter((o) => o.isDefault).map((o) => o.id)
+    if (g.mode === 'single') {
+      const first = defaults[0] ?? (g.required ? g.options[0]?.id : undefined)
+      sel[g.id] = first ? [first] : []
     } else {
-      sel[g.id] = []
+      sel[g.id] = defaults
     }
   }
   return sel
