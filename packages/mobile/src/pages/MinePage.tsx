@@ -33,17 +33,13 @@ export function MinePage() {
       </div>
 
       <div className="card mine-menu">
-        <Link className="entry" to="/orders">
-          <span>我的订单</span>
-          <span className="muted">{orders.length} 笔 ›</span>
-        </Link>
         <Link className="entry" to="/bills">
           <span>我的账单</span>
           <span className="muted">餐饮消费 ›</span>
         </Link>
         <Link className="entry" to="/tickets">
           <span>我的工单</span>
-          <span className="muted">{openTickets ? `${openTickets} 处理中 ›` : '›'}</span>
+          <span className="muted">{openTickets ? `${openTickets} 待处理 ›` : '›'}</span>
         </Link>
         <Link className="entry" to="/service">
           <span>联系客服</span>

@@ -146,10 +146,10 @@ export type Ticket = {
   user: string
   phone: string
   content: string
-  /** open=处理中，done=已完结 */
+  /** open=待处理，done=已完结 */
   status: 'open' | 'done'
   handler: string
-  /** 客服回复结果，处理中为空 */
+  /** 客服回复结果，待处理为空 */
   result: string
   createdAt: string
   repliedAt: string

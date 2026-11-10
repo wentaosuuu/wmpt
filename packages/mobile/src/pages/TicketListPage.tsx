@@ -5,7 +5,7 @@ import { ticketStatusLabel, ticketStatusTone, ticketTypeLabel } from '../lib/tic
 import { useApp } from '../store/AppStore'
 
 const tabs = [
-  { id: 'processing', label: '处理中' },
+  { id: 'processing', label: '待处理' },
   { id: 'all', label: '全部' },
 ] as const
 
@@ -50,7 +50,7 @@ export function TicketListPage() {
         </Link>
       ))}
       {!list.length ? (
-        <Empty text={tab === 'processing' ? '暂无处理中的工单' : '暂无客服工单'} />
+        <Empty text={tab === 'processing' ? '暂无待处理工单' : '暂无客服工单'} />
       ) : null}
     </section>
   )
